@@ -12,7 +12,9 @@
 #define LIS3DH_ADC_2_H          0x0B
 #define LIS3DH_ADC_3_L          0x0C
 #define LIS3DH_ADC_3_H          0x0D
+
 #define LIS3DH_WHO_AN_I         0x0F
+
 #define LIS3DH_CTRL_REG0        0x1E
 #define LIS3DH_TEMP_CFG_REG     0x1F
 #define LIS3DH_CTRL_REG1        0x20
@@ -97,48 +99,26 @@ typedef struct LIS3DHState
 
     /* Registers */
     uint8_t status_reg_aux;     //
+
+    uint8_t adc_reg[0x07];      //
     
-    uint8_t adc_1_L;            // 
-    uint8_t adc_1_H;            // 
-    uint8_t adc_2_L;            // 
-    uint8_t adc_2_H;            // 
-    uint8_t adc_3_L;            // 
-    uint8_t adc_3_H;            // 
-
     uint8_t who_am_i;           //
-
-    uint8_t ctrl_reg0;          //
-    uint8_t temp_cfg_reg;       //
-    uint8_t ctrl_reg1;          //
-    uint8_t ctrl_reg2;          //
-    uint8_t ctrl_reg3;          //
-    uint8_t ctrl_reg4;          //
-    uint8_t ctrl_reg5;          //
-    uint8_t ctrl_reg6;          //
-
+    
+    uint8_t ctrl_reg[0x08]      //
+    
     uint8_t reference;          //
-
+    
     uint8_t status_reg;         //
 
-    uint8_t out_X_L;            //
-    uint8_t out_X_H;            //
-    uint8_t out_Y_L;            //
-    uint8_t out_Y_H;            //
-    uint8_t out_Z_L;            //
-    uint8_t out_Z_H;            //
+    uint8_t out_x_reg[0x02];    //
+    uint8_t out_y_reg[0x02];    //
+    uint8_t out_z_reg[0x02];    //
 
     uint8_t fifo_ctrl_reg;      //
     uint8_t fifo_src_reg;       //
 
-    uint8_t int1_cfg;           //
-    uint8_t int1_src;           //
-    uint8_t int1_ths;           //
-    uint8_t int1_duration;      //
-
-    uint8_t int2_cfg;           //
-    uint8_t int2_src;           //
-    uint8_t int2_ths;           //
-    uint8_t int2_duration;      //
+    uint8_t int1_reg[0x04]      //
+    uint8_t int2_reg[0x04]      //
    
     uint8_t click_cfg;          //
     uint8_t click_src;          //
@@ -148,7 +128,6 @@ typedef struct LIS3DHState
     uint8_t time_latency;       //
     uint8_t time_window;        //
 
-    uint8_t act_ths;            //
-    uint8_t act_dur;            //
+    uint8_t act_reg;
 
 } LIS3DHState;
