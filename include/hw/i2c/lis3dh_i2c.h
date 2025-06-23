@@ -13,7 +13,7 @@
 #define LIS3DH_ADC_3_L          0x0C
 #define LIS3DH_ADC_3_H          0x0D
 
-#define LIS3DH_WHO_AN_I         0x0F
+#define LIS3DH_WHO_AM_I         0x0F
 
 #define LIS3DH_CTRL_REG0        0x1E
 #define LIS3DH_TEMP_CFG_REG     0x1F
@@ -51,7 +51,7 @@
 #define LIS3DH_ACT_DUR          0x3F
 
 /* Default */
-#define LIS3DH_WHO_AN_I_DEFAULT         0x33    //00110011 (default in write)
+#define LIS3DH_WHO_AM_I_DEFAULT         0x33    //00110011 (default in write)
 #define LIS3DH_CTRL_REG0_DEFAULT        0x10
 #define LIS3DH_TEMP_CFG_REG_DEFAULT     0x00
 #define LIS3DH_CTRL_REG1_DEFAULT        0x07
@@ -63,6 +63,7 @@
 #define LIS3DH_REFERENCE_DEFAULT        0x00
 #define LIS3DH_STATUS_REG_DEFAULT       0x00
 #define LIS3DH_FIFO_CTRL_REG_DEFAULT    0x00
+#define LIS3DH_FIFO_SRC_REG_DEFAULT     0x00
 #define LIS3DH_INT1_CFG_DEFAULT         0x00
 #define LIS3DH_INT1_THS_DEFAULT         0x00
 #define LIS3DH_INT1_DURATION_DEFAULT    0x00
@@ -75,6 +76,7 @@
 #define LIS3DH_INT2_THS_DEFAULT         0x00
 #define LIS3DH_INT2_DURATION_DEFAULT    0x00
 #define LIS3DH_CLICK_CFG_DEFAULT        0x00
+#define LIS3DH_CLICK_SRC_DEFAULT        0x00
 #define LIS3DH_CLICK_THS_DEFAULT        0x00
 #define LIS3DH_TIME_LIMIT_DEFAULT       0x00
 #define LIS3DH_TIME_LATENCY_DEFAULT     0x00
@@ -128,6 +130,6 @@ typedef struct LIS3DHState
     uint8_t time_latency;       //
     uint8_t time_window;        //
 
-    uint8_t act_reg;
+    uint8_t act_reg[0x02];      //
 
 } LIS3DHState;
