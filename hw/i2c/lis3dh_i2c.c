@@ -9,23 +9,69 @@
 /**********************/
 /*  Basic Functions   */
 /**********************/
-static uint8_t lis3dh_read_byte( LIS3DHState *src )
+static void lis3dh_write( LIS3DHState *dst, uint8_t addr, uint8_t src )
+{
+    
+}
+
+static uint8_t lis3dh_read( LIS3DHState *src, uint8_t addr )
+{
+    
+}
+
+static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
+{
+    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
+
+    /* Register Initialization */
+    lis3dh_i2c_reset(dev);
+
+    /*  */
+}
+
+static void lis3dh_i2c_unrealize(DeviceState *dev)
 {
 
 }
 
-static int lis3dh_i2c_realize(DeviceState *dev, Error **errp)
+static void lis3dh_i2c_reset(DeviceState *dev)
 {
-    LIS3DHState *lis3dh = 
-}
+    LIS3DHState *lis3dh     = LIS3DH_I2C(dev);
 
-static int lis3dh_i2c_unrealize()
-{
+    lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_DEFAULT;        //Default: Output
+    
+    memset( lis3dh->adc_reg, 0, 0x07 );                         //Default: Output
+    
+    uint8_t who_am_i = LIS3DH_WHO_AM_I_DEFAULT;                 //Default: 00110011 (default in write)
+    
+    uint8_t ctrl_reg[0x00]  = LIS3DH_CTRL_REG0_DEFAULT;         //Default: 00010000
+    uint8_t ctrl_reg[0x01]  = LIS3DH_TEMP_CFG_REG_DEFAULT;      //Default: 0
+    uint8_t ctrl_reg[0x02]  = LIS3DH_CTRL_REG1_DEFAULT;         //Default: 00000111
+    
+    memset( ((lis3dh->ctrl_reg)+2), 0, 0x06 );                  //Default: 0
 
-}
+    lis3dh->reference       = LIS3DH_REFERENCE_DEFAULT;         //Default: 0
+    lis3dh->status_reg      = LIS3DH_STATUS_REG_DEFAULT;        //Default: Output
+    
+    memset( lis3dh->out_x_reg,  0, 0x02 );                      //Default: Output
+    memset( lis3dh->out_y_reg,  0, 0x02 );                      //Default: Output
+    memset( lis3dh->out_z_reg,  0, 0x02 );                      //Default: Output
+    
+    lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEFAULT;     //Default: 0
+    lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEFAULT;      //Default: Output
+    
+    memset( lis3dh->int1_reg,   0, 0x04 );                      //Default:  
+    memset( lis3dh->int2_reg,   0, 0x04 );                      //Default:
+   
+    lis3dh->click_cfg       = LIS3DH_CLICK_CFG_DEFAULT;         //Default: 0
+    lis3dh->click_src       = LIS3DH_CLICK_SRC_DEFAULT;         //Default: Output
+    lis3dh->click_ths       = LIS3DH_CLICK_CFG_DEFAULT;         //Default: 0
 
-static int lis3dh_i2c_reset()
-{
+    lis3dh->time_limit      = LIS3DH_TIME_LIMIT_DEFAULT;        //Default: 0
+    lis3dh->time_latency    = LIS3DH_TIME_LATENCY_DEFAULT;      //Default: 0
+    lis3dh->time_window     = LIS3DH_TIME_WINDOW_DEFAULT;       //Default: 0
+
+    memset( lis3dh->act_reg, 0, 0x02 );                         //Default: 0
 
 }
 
