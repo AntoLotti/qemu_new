@@ -12,9 +12,9 @@
 #define LIS3DH_ADC_2_H          0x0B
 #define LIS3DH_ADC_3_L          0x0C
 #define LIS3DH_ADC_3_H          0x0D
-
+// direction 0x0E reserved
 #define LIS3DH_WHO_AM_I         0x0F
-
+// directions [0x10-0x1D] reserved
 #define LIS3DH_CTRL_REG0        0x1E
 #define LIS3DH_TEMP_CFG_REG     0x1F
 #define LIS3DH_CTRL_REG1        0x20
@@ -90,7 +90,7 @@
 /************************/
 
 /* Declaration of the QOM for the LIS3DH */
-#define TYPE_LIS3DH_I2C "LIS3DH_I2C"
+#define TYPE_LIS3DH_I2C "lis3dh-i2c"
 OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH_I2C);
 
 /* LIS3DH State struct requirements (the hardware) */
@@ -98,6 +98,12 @@ typedef struct LIS3DHState
 {
     /* My parent object */
     I2CSlave parent_obj;        //
+
+    /* Critical Fields */
+    uint8_t pointer;           // Current register pointer
+    bool data_ready;           // Data ready flag
+    bool command_phase;        // I2C command phase tracker
+    QEMUTimer *timer;          // Data update timer
 
     /* Registers */
     uint8_t status_reg_aux;     //
