@@ -21,17 +21,28 @@ static uint8_t lis3dh_read( LIS3DHState *src, uint8_t addr )
 
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
-
-    /* Register Initialization */
-    lis3dh_i2c_reset(dev);
-
-    /*  */
+    LIS3DHState *s = LIS3DH_I2C(dev);
+    
+    /* Initialize I2C state */
+    s->pointer = 0xFF;  // Invalid initial pointer
+    s->command_phase = true;
+    
+    /* Create data update timer */
+    s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_update_data, s);
+    timer_mod(s->timer, 
+        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100); // 100Hz update
+    
+    /* Enable hotplug */
+    DeviceClass *dc = DEVICE_GET_CLASS(dev);
+    dc->hotpluggable = true;
 }
 
 static void lis3dh_i2c_unrealize(DeviceState *dev)
 {
-
+    LIS3DHState *s = LIS3DH_I2C(dev);
+    
+    timer_del(s->timer);
+    timer_free(s->timer);
 }
 
 static void lis3dh_i2c_reset(DeviceState *dev)
@@ -79,19 +90,40 @@ static void lis3dh_i2c_reset(DeviceState *dev)
 /********************/
 /*  I2C Functions   */
 /********************/
-static int lis3dh_i2c_event(I2CSlave *i2c)
+static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 {
-
+    printf("I2C LIS3DH event: %d \n", event );
+    
+    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
+    
+    switch (event) 
+    {
+        case I2C_START_SEND:
+            printf("I2C start send");    
+            break;
+        case I2C_START_RECV:
+            printf("I2C start reciv");    
+            break;
+        case I2C_FINISH:
+            printf("I2C finish");    
+            break;
+        case I2C_NACK:
+            printf("I2C nack");    
+            break;
+        default:
+            return -1;
+    }
+    return 0;
 }
 
-static int lis3dh_i2c_send(I2CSlave *i2c)
+static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
-
+    printf("I2C LIS3DH sent:");
 }
 
 static int lis3dh_i2c_recv(I2CSlave *i2c)
 {
-
+    printf("I2C LIS3DH recived:");
 }
 
 /*********************/
@@ -105,15 +137,15 @@ void lis3dh_i2c_class_init( ObjectClass *kclass, const void *data )
     I2CSlaveClass *k    = I2C_SLAVE_CLASS(klass);   // The I2C-specific interface implementation
     
     /* Device lifecycle */
+    dc->realize     = lis3dh_i2c_realize;           // Called when device created
+    dc->unrealize   = lis3dh_i2c_unrealize;         // Cleanup
+    dc->reset       = lis3dh_i2c_reset;             // On system reset
     dc->desc        = "I2C accelerometer: LIS3DH"; 
-    dc->realize     = lis3dh_i2c_realize;       // Called when device created
-    dc->unrealize   = lis3dh_i2c_unrealize;     // Cleanup
-    dc->reset       = lis3dh_i2c_reset;         // On system reset
     
     /* I2C protocol implementation */
-    k->send     = lis3dh_i2c_send;              // Master writes to device
-    k->recv     = lis3dh_i2c_recv;              // Master reads from device
-    k->event    = lis3dh_i2c_event;             // Bus events: START/STOP/NACK
+    k->send     = lis3dh_i2c_send;                  // Master writes to device
+    k->recv     = lis3dh_i2c_recv;                  // Master reads from device
+    k->event    = lis3dh_i2c_event;                 // Bus events: START/STOP/NACK
 }
 
 /* Tells QEMU’s type system how to create and wire the LIS3DH object class. */
