@@ -114,7 +114,7 @@ typedef struct LIS3DHState
     
     uint8_t ctrl_reg[0x08]      //
     
-    uint8_t reference;          //
+    uint8_t reference_reg;      //
     
     uint8_t status_reg;         //
 

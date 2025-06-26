@@ -9,14 +9,30 @@
 /**********************/
 /*  Basic Functions   */
 /**********************/
-static void lis3dh_write( LIS3DHState *dst, uint8_t addr, uint8_t src )
+static void lis3dh_update_data(void *opaque)
 {
+    LIS3DHState *s = opaque;
     
-}
-
-static uint8_t lis3dh_read( LIS3DHState *src, uint8_t addr )
-{
+    /* Generate new accelerometer values */
+    // Replace with actual sensor model or test data
+    uint16_t x = rand() % 0xFFFF;
+    uint16_t y = rand() % 0xFFFF;
+    uint16_t z = rand() % 0xFFFF;
     
+    /* Update registers */
+    s->out_x_reg[LIS3DH_OUT_X_H - LIS3DH_OUT_X_L] = x & 0xFF;
+    s->out_x_reg[LIS3DH_OUT_X_L - LIS3DH_OUT_X_L] = (x >> 8) & 0xFF;
+    s->out_y_reg[LIS3DH_OUT_Y_H - LIS3DH_OUT_Y_L] = y & 0xFF;
+    s->out_y_reg[LIS3DH_OUT_Y_L - LIS3DH_OUT_Y_L] = (y >> 8) & 0xFF;
+    s->out_z_reg[LIS3DH_OUT_Z_H - LIS3DH_OUT_Y_L] = z & 0xFF;
+    s->out_z_reg[LIS3DH_OUT_Z_H - LIS3DH_OUT_Y_L] = (z >> 8) & 0xFF;
+    
+    /* Set data ready flag */
+    s->status_reg |= 0x08;  // Set DRDY bit
+    
+    /* Reschedule timer */
+    timer_mod(s->timer, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + 
+             NANOSECONDS_PER_SECOND / 100);
 }
 
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
@@ -40,7 +56,7 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 static void lis3dh_i2c_unrealize(DeviceState *dev)
 {
     LIS3DHState *s = LIS3DH_I2C(dev);
-    
+
     timer_del(s->timer);
     timer_free(s->timer);
 }
@@ -92,38 +108,205 @@ static void lis3dh_i2c_reset(DeviceState *dev)
 /********************/
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 {
-    printf("I2C LIS3DH event: %d \n", event );
+    LIS3DHState *s = LIS3DH_I2C(i2c);
     
-    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
-    
-    switch (event) 
-    {
-        case I2C_START_SEND:
-            printf("I2C start send");    
-            break;
-        case I2C_START_RECV:
-            printf("I2C start reciv");    
-            break;
-        case I2C_FINISH:
-            printf("I2C finish");    
-            break;
-        case I2C_NACK:
-            printf("I2C nack");    
-            break;
-        default:
-            return -1;
+    switch (event) {
+    case I2C_START_SEND:  // Start of write operation
+        s->command_phase = true;
+        s->pointer = 0xFF;  // Reset pointer
+        break;
+        
+    case I2C_START_RECV:  // Start of read operation
+        // If no pointer set, default to first register
+        if (s->pointer == 0xFF)
+        {
+            s->pointer = LIS3DH_STATUS_REG;
+        }
+        break;
+        
+    case I2C_FINISH:      // Stop condition
+        s->command_phase = false;
+        break;
+        
+    case I2C_NACK:        // NACK received
+        // Handle error if needed
+        break;
     }
     return 0;
 }
 
 static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
-    printf("I2C LIS3DH sent:");
+    LIS3DHState *s = LIS3DH_I2C(i2c);
+    
+    if (s->command_phase) {
+        // First byte is register address
+        s->pointer = data;
+        s->command_phase = false;
+    } else {
+        // Write to register
+        set_register_value(s, s->pointer, data);
+        s->pointer++;
+    }
+    return 0
 }
 
-static int lis3dh_i2c_recv(I2CSlave *i2c)
+static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 {
-    printf("I2C LIS3DH recived:");
+    LIS3DHState *s = LIS3DH_I2C(i2c);
+    uint8_t val = 0x00;
+    
+    switch (s->pointer)
+    {
+        case LIS3DH_STATUS_REG    :
+
+            break;
+
+        case LIS3DH_ADC_1_L       :
+            val = s->adc_reg[LIS3DH_ADC_1_L - LIS3DH_ADC_1_L];
+            break;
+
+        case LIS3DH_ADC_1_H       :
+            val = s->adc_reg[LIS3DH_ADC_1_H - LIS3DH_ADC_1_L];
+            break;
+
+        case LIS3DH_ADC_2_L       :
+            val = s->adc_reg[LIS3DH_ADC_2_L - LIS3DH_ADC_1_L];
+            break;
+
+        case LIS3DH_ADC_2_H       :
+            val = s->adc_reg[LIS3DH_ADC_2_H- LIS3DH_ADC_1_L];
+            break;
+
+        case LIS3DH_ADC_3_L       :
+            val = s->adc_reg[LIS3DH_ADC_3_L - LIS3DH_ADC_1_L];
+            break;
+
+        case LIS3DH_ADC_3_H       :
+            val = s->adc_reg[LIS3DH_ADC_3_H - LIS3DH_ADC_1_L];
+            break;
+
+        case LIS3DH_WHO_AM_I      :
+            val = LIS3DH_WHO_AM_I_DEFAULT;
+            break;
+
+        case LIS3DH_CTRL_REG0     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG0 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_TEMP_CFG_REG  :
+            val = s->ctrl_reg[LIS3DH_TEMP_CFG_REG - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_CTRL_REG1     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG1 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_CTRL_REG2     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG2 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_CTRL_REG3     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG3 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_CTRL_REG4     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG4 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_CTRL_REG5     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG5 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_CTRL_REG6     :
+            val = s->ctrl_reg[LIS3DH_CTRL_REG6 - LIS3DH_CTRL_REG0];
+            break;
+
+        case LIS3DH_REFERENCE     :
+            val = LIS3DH_REFERENCE
+            break;
+
+        case LIS3DH_STATUS_REG    :
+            val = LIS3DH_STATUS_REG
+            break;
+
+        case LIS3DH_OUT_X_L       :
+            break;
+
+        case LIS3DH_OUT_X_H       :
+            break;
+
+        case LIS3DH_OUT_Y_L       :
+            break;
+
+        case LIS3DH_OUT_Y_H       :
+            break;
+
+        case LIS3DH_OUT_Z_L       :
+            break;
+
+        case LIS3DH_OUT_Z_H       :
+            break;
+
+        case LIS3DH_FIFO_CTRL_REG :
+            break;
+
+        case LIS3DH_FIFO_SRC_REG  :
+            break;
+
+        case LIS3DH_INT1_CFG      :
+            break;
+
+        case LIS3DH_INT1_SRC      :
+            break;
+
+        case LIS3DH_INT1_THS      :
+            break;
+
+        case LIS3DH_INT1_DURATION :
+            break;
+
+        case LIS3DH_INT2_CFG      :
+            break;
+
+        case LIS3DH_INT2_SRC      :
+            break;
+
+        case LIS3DH_INT2_THS      :
+            break;
+
+        case LIS3DH_INT2_DURATION :
+            break;
+            
+        case LIS3DH_CLICK_CFG     :
+            break;
+
+        case LIS3DH_CLICK_SRC     :
+            break;
+
+        case LIS3DH_CLICK_THS     :
+            break;
+        
+        case LIS3DH_TIME_LIMIT    :
+            break;
+        
+        case LIS3DH_TIME_LATENCY  :
+            break;
+
+        case LIS3DH_TIME_WINDOW   :
+            break;
+
+        case LIS3DH_ACT_THS       :
+            break;
+
+        case LIS3DH_ACT_DUR       :
+            break;
+
+        default                   :
+            break;
+    }
+    
+    return val;
 }
 
 /*********************/
