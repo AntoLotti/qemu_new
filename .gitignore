@@ -2,6 +2,7 @@
 /build/
 /.cache/
 /.vscode/
+bin/debug/native/
 *.pyc
 .sdk
 .stgit-*
