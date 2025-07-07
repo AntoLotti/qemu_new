@@ -1,11 +1,11 @@
 
-
 #include "hw/sysbus.h"
 #include "hw/i2c/i2c.h"
+#include "qemu/timer.h"
 #include "qom/object.h"
 
 /* Directions */
-#define LIS3DH_STATUS_REG       0x07
+#define LIS3DH_STATUS_REG_AUX   0x07
 #define LIS3DH_ADC_1_L          0x08
 #define LIS3DH_ADC_1_H          0x09
 #define LIS3DH_ADC_2_L          0x0A
@@ -108,25 +108,25 @@ typedef struct LIS3DHState
     /* Registers */
     uint8_t status_reg_aux;     //
 
-    uint8_t adc_reg[0x07];      //
+    //uint8_t adc_reg[0x07];      //
     
     uint8_t who_am_i;           //
     
-    uint8_t ctrl_reg[0x08]      //
+    //uint8_t ctrl_reg[0x08]      //
     
     uint8_t reference_reg;      //
     
-    uint8_t status_reg;         //
+    //uint8_t status_reg;         //
 
     uint8_t out_x_reg[0x02];    //
     uint8_t out_y_reg[0x02];    //
     uint8_t out_z_reg[0x02];    //
 
-    uint8_t fifo_ctrl_reg;      //
-    uint8_t fifo_src_reg;       //
+    //uint8_t fifo_ctrl_reg;      //
+    //uint8_t fifo_src_reg;       //
 
-    uint8_t int1_reg[0x04]      //
-    uint8_t int2_reg[0x04]      //
+    //uint8_t int1_reg[0x04]      //
+    //uint8_t int2_reg[0x04]      //
    
     uint8_t click_cfg;          //
     uint8_t click_src;          //
@@ -136,6 +136,6 @@ typedef struct LIS3DHState
     uint8_t time_latency;       //
     uint8_t time_window;        //
 
-    uint8_t act_reg[0x02];      //
+    //uint8_t act_reg[0x02];      //
 
 } LIS3DHState;
