@@ -118,41 +118,56 @@ typedef struct LIS3DHState
 
     /* Critical Fields */
     uint8_t pointer;           // Current register pointer
+
     bool data_ready;           // Data ready flag
-    bool command_phase;        // I2C command phase tracker
+    bool command_phase;        // I2C co mmand phase tracker
     QEMUTimer *timer;          // Data update timer
 
     /* Registers */
-    uint8_t status_reg_aux;     //
 
-    //uint8_t adc_reg[0x07];      //
-    
-    uint8_t who_am_i;           //
-    
-    //uint8_t ctrl_reg[0x08]      //
-    
-    uint8_t reference_reg;      //
-    
-    //uint8_t status_reg;         //
-
-    uint8_t out_x_reg[0x02];    //
-    uint8_t out_y_reg[0x02];    //
-    uint8_t out_z_reg[0x02];    //
-
-    //uint8_t fifo_ctrl_reg;      //
-    //uint8_t fifo_src_reg;       //
-
-    //uint8_t int1_reg[0x04]      //
-    //uint8_t int2_reg[0x04]      //
-   
-    uint8_t click_cfg;          //
-    uint8_t click_src;          //
-    uint8_t click_ths;          //
-
-    uint8_t time_limit;         //
-    uint8_t time_latency;       //
-    uint8_t time_window;        //
-
-    //uint8_t act_reg[0x02];      //
-
+    // directions [0x00-0x06] reserved
+    uint8_t status_reg_aux;     // Status Register
+    uint8_t adc_1_l;            // 1-Axis Acceleration Data Low Register
+    uint8_t adc_1_h;            // 1-Axis Acceleration Data High Register
+    uint8_t adc_2_l;            // 2-Axis Acceleration Data Low Register
+    uint8_t adc_2_h;            // 2-Axis Acceleration Data High Register
+    uint8_t adc_3_l;            // 3-Axis Acceleration Data Low Register
+    uint8_t adc_3_h;            // 3-Axis Acceleration Data High Register
+    // direction 0x0E reserved
+    uint8_t who_am_i;           // Device identification Register 
+    // directions [0x10-0x1D] reserved
+    uint8_t ctrl_reg0;
+    uint8_t temp_cfg_reg;       // Temperature Sensor Register
+    uint8_t ctrl_reg1;          // Accelerometer Control Register 1
+    uint8_t ctrl_reg2;          // Accelerometer Control Register 2
+    uint8_t ctrl_reg3;          // Accelerometer Control Register 3
+    uint8_t ctrl_reg4;          // Accelerometer Control Register 4
+    uint8_t ctrl_reg5;          // Accelerometer Control Register 5
+    uint8_t ctrl_reg6;          // Accelerometer Control Register 6
+    uint8_t reference;          // Reference/Datacapture Register
+    uint8_t status_reg;         // Status Register 2
+    uint8_t iut_x_l;            // X-Axis Acceleration Data Low Register
+    uint8_t iut_x_h;            // X-Axis Acceleration Data High Register
+    uint8_t iut_y_l;            // Y-Axis Acceleration Data Low Register
+    uint8_t iut_y_h;            // Y-Axis Acceleration Data High Register
+    uint8_t iut_z_l;            // Z-Axis Acceleration Data Low Register
+    uint8_t iut_z_h;            // Z-Axis Acceleration Data High Register
+    uint8_t fifo_ctrl_reg;      // FIFO Control Register
+    uint8_t fifo_src_reg;       // FIFO Source Register
+    uint8_t int1_cfg;           // Interrupt Configuration Register
+    uint8_t int1_src;           // Interrupt Source Register
+    uint8_t int1_ths;           // Interrupt Threshold Register
+    uint8_t int1_duration;      // Interrupt Duration Register
+    uint8_t int2_cfg;           //
+    uint8_t int2_src;           //
+    uint8_t int2_ths;           //
+    uint8_t int2_duration;      //       
+    uint8_t click_cfg;          // Interrupt Click Recognition Register
+    uint8_t click_src;          // Interrupt Click Source Register
+    uint8_t click_ths;          // Interrupt Click Threshold Register
+    uint8_t time_limit;         // Click Time Limit Register
+    uint8_t time_latency;       // Click Time Latency Register
+    uint8_t time_window;        // Click Time Window Register
+    uint8_t act_ths;            //
+    uint8_t act_dur;            //
 } LIS3DHState;
