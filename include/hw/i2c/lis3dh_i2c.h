@@ -1,3 +1,28 @@
+/*
+ * LIS3DH 
+ *
+ * Copyright (c) 2025 Antonio Lotti Villar (antoniolottivillar@gmail.com)
+ *
+ * SPDX-License-Identifier: MIT
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include "hw/sysbus.h"
 #include "hw/i2c/i2c.h"
@@ -14,9 +39,9 @@
 #define LIS3DH_ADC_3_L              0x0C    // 3-Axis Acceleration Data Low Register
 #define LIS3DH_ADC_3_H              0x0D    // 3-Axis Acceleration Data High Register
 // direction 0x0E reserved
-#define LIS3DH_WHO_AM_I             0x0F    //Device identification Register 
+#define LIS3DH_WHO_AM_I             0x0F    // Device identification Register 
 // directions [0x10-0x1D] reserved
-#define LIS3DH_CTRL_REG0            0x1E
+#define LIS3DH_CTRL_REG0            0x1E    // 
 #define LIS3DH_TEMP_CFG_REG         0x1F    // Temperature Sensor Register
 #define LIS3DH_CTRL_REG1            0x20    // Accelerometer Control Register 1
 #define LIS3DH_CTRL_REG2            0x21    // Accelerometer Control Register 2
@@ -48,8 +73,8 @@
 #define LIS3DH_TIME_LIMIT           0x3B    // Click Time Limit Register
 #define LIS3DH_TIME_LATENCY         0x3C    // Click Time Latency Register
 #define LIS3DH_TIME_WINDOW          0x3D    // Click Time Window Register
-#define LIS3DH_ACT_THS              0x3E
-#define LIS3DH_ACT_DUR              0x3F
+#define LIS3DH_ACT_THS              0x3E    // 
+#define LIS3DH_ACT_DUR              0x3F    // 
 
 /* Default */
 #define LIS3DH_REGS_DEF         0x00
@@ -64,9 +89,9 @@
 #define LIS3DH_ADC_3_L_DEF              LIS3DH_OUTPUTS_DEF      // 3-Axis Acceleration Data Low Register
 #define LIS3DH_ADC_3_H_DEF              LIS3DH_OUTPUTS_DEF      // 3-Axis Acceleration Data High Register
 // direction 0x0E reserved
-#define LIS3DH_WHO_AM_I_DEF             0x33                    //Device identification Register 00110011 (default in write)
+#define LIS3DH_WHO_AM_I_DEF             0x33                    // Device identification Register 00110011 (default in write)
 // directions [0x10-0x1D] reserved
-#define LIS3DH_CTRL_REG0_DEF            0x10
+#define LIS3DH_CTRL_REG0_DEF            0x10                    // 
 #define LIS3DH_TEMP_CFG_REG_DEF         LIS3DH_REGS_DEF         // Temperature Sensor Register
 #define LIS3DH_CTRL_REG1_DEF            0x07                    // Accelerometer Control Register 1
 #define LIS3DH_CTRL_REG2_DEF            LIS3DH_REGS_DEF         // Accelerometer Control Register 2
@@ -98,8 +123,14 @@
 #define LIS3DH_TIME_LIMIT_DEF           LIS3DH_REGS_DEF         // Click Time Limit Register
 #define LIS3DH_TIME_LATENCY_DEF         LIS3DH_REGS_DEF         // Click Time Latency Register
 #define LIS3DH_TIME_WINDOW_DEF          LIS3DH_REGS_DEF         // Click Time Window Register
-#define LIS3DH_ACT_THS_DEF              LIS3DH_REGS_DEF
-#define LIS3DH_ACT_DUR_DEF              LIS3DH_REGS_DEF
+#define LIS3DH_ACT_THS_DEF              LIS3DH_REGS_DEF         // 
+#define LIS3DH_ACT_DUR_DEF              LIS3DH_REGS_DEF         // 
+
+#define LIS3DH_ADDRESS                  0x19                    // 0x33 >> 1 
+
+#define LIS3DH_SUB_REG_MASK             0xFE                    // Mask to get the LIS3DH register direcction
+#define LIS3DH_SUB_AUTO_INC_MASK        0x01                    // Mask to get the Auto-increment bit
+
 
 /************************/
 /*  Device Structure    */
@@ -135,7 +166,7 @@ typedef struct LIS3DHState
     // direction 0x0E reserved
     uint8_t who_am_i;           // Device identification Register 
     // directions [0x10-0x1D] reserved
-    uint8_t ctrl_reg0;
+    uint8_t ctrl_reg0;          //
     uint8_t temp_cfg_reg;       // Temperature Sensor Register
     uint8_t ctrl_reg1;          // Accelerometer Control Register 1
     uint8_t ctrl_reg2;          // Accelerometer Control Register 2
