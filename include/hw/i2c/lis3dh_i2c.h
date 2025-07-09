@@ -34,14 +34,14 @@
 #define LIS3DH_OUT_Z_H              0x2D    // Z-Axis Acceleration Data High Register
 #define LIS3DH_FIFO_CTRL_REG        0x2E    // FIFO Control Register
 #define LIS3DH_FIFO_SRC_REG         0x2F    // FIFO Source Register
-#define LIS3DH_INT1_CFG             0x30    // Interrupt Configuration Register
-#define LIS3DH_INT1_SRC             0x31    // Interrupt Source Register
-#define LIS3DH_INT1_THS             0x32    // Interrupt Threshold Register
-#define LIS3DH_INT1_DURATION        0x33    // Interrupt Duration Register
-#define LIS3DH_INT2_CFG             0x34
-#define LIS3DH_INT2_SRC             0x35
-#define LIS3DH_INT2_THS             0x36
-#define LIS3DH_INT2_DURATION        0x37
+#define LIS3DH_INT1_CFG             0x30    // Interrupt 1 Configuration Register
+#define LIS3DH_INT1_SRC             0x31    // Interrupt 1 Source Register
+#define LIS3DH_INT1_THS             0x32    // Interrupt 1 Threshold Register
+#define LIS3DH_INT1_DURATION        0x33    // Interrupt 1 Duration Register
+#define LIS3DH_INT2_CFG             0x34    // Interrupt 2 Configuration Register
+#define LIS3DH_INT2_SRC             0x35    // Interrupt 2 Source Register
+#define LIS3DH_INT2_THS             0x36    // Interrupt 2 Threshold Register
+#define LIS3DH_INT2_DURATION        0x37    // Interrupt 2 Duration Register
 #define LIS3DH_CLICK_CFG            0x38    // Interrupt Click Recognition Register
 #define LIS3DH_CLICK_SRC            0x39    // Interrupt Click Source Register
 #define LIS3DH_CLICK_THS            0x3A    // Interrupt Click Threshold Register
@@ -84,14 +84,14 @@
 #define LIS3DH_OUT_Z_H_DEF              LIS3DH_OUTPUTS_DEF      // Z-Axis Acceleration Data High Register
 #define LIS3DH_FIFO_CTRL_REG_DEF        LIS3DH_REGS_DEF         // FIFO Control Register
 #define LIS3DH_FIFO_SRC_REG_DEF         LIS3DH_REGS_DEF         // FIFO Source Register
-#define LIS3DH_INT1_CFG_DEF             LIS3DH_REGS_DEF         // Interrupt Configuration Register
-#define LIS3DH_INT1_SRC_DEF             LIS3DH_OUTPUTS_DEF      // Interrupt Source Register
-#define LIS3DH_INT1_THS_DEF             LIS3DH_REGS_DEF         // Interrupt Threshold Register
-#define LIS3DH_INT1_DURATION_DEF        LIS3DH_REGS_DEF         // Interrupt Duration Register
-#define LIS3DH_INT2_CFG_DEF             LIS3DH_REGS_DEF
-#define LIS3DH_INT2_SRC_DEF             LIS3DH_OUTPUTS_DEF
-#define LIS3DH_INT2_THS_DEF             LIS3DH_REGS_DEF
-#define LIS3DH_INT2_DURATION_DEF        LIS3DH_REGS_DEF
+#define LIS3DH_INT1_CFG_DEF             LIS3DH_REGS_DEF         // Interrupt 1 Configuration Register
+#define LIS3DH_INT1_SRC_DEF             LIS3DH_OUTPUTS_DEF      // Interrupt 1 Source Register
+#define LIS3DH_INT1_THS_DEF             LIS3DH_REGS_DEF         // Interrupt 1 Threshold Register
+#define LIS3DH_INT1_DURATION_DEF        LIS3DH_REGS_DEF         // Interrupt 1 Duration Register
+#define LIS3DH_INT2_CFG_DEF             LIS3DH_REGS_DEF         // Interrupt 2 Configuration Register
+#define LIS3DH_INT2_SRC_DEF             LIS3DH_OUTPUTS_DEF      // Interrupt 2 Source Register
+#define LIS3DH_INT2_THS_DEF             LIS3DH_REGS_DEF         // Interrupt 2 Threshold Register
+#define LIS3DH_INT2_DURATION_DEF        LIS3DH_REGS_DEF         // Interrupt 2 Duration Register
 #define LIS3DH_CLICK_CFG_DEF            LIS3DH_REGS_DEF         // Interrupt Click Recognition Register
 #define LIS3DH_CLICK_SRC_DEF            LIS3DH_OUTPUTS_DEF      // Interrupt Click Source Register
 #define LIS3DH_CLICK_THS_DEF            LIS3DH_REGS_DEF         // Interrupt Click Threshold Register
@@ -113,18 +113,17 @@ OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH_I2C);
 /* LIS3DH State struct requirements (the hardware) */
 typedef struct LIS3DHState
 {
-    /* My parent object */
-    I2CSlave parent_obj;        //
+    /* Parent object */
+    I2CSlave i2c;
 
     /* Critical Fields */
-    uint8_t pointer;           // Current register pointer
-
-    bool data_ready;           // Data ready flag
-    bool command_phase;        // I2C co mmand phase tracker
-    QEMUTimer *timer;          // Data update timer
+    uint8_t address;       // 7-bit I2C address
+	uint8_t ptr;           // Current register pointer
+	bool auto_increment;   // Auto-advance pointer after access
+	bool data_ready;       // Data ready flag
+	bool command_phase;    // I2C command phase tracker
 
     /* Registers */
-
     // directions [0x00-0x06] reserved
     uint8_t status_reg_aux;     // Status Register
     uint8_t adc_1_l;            // 1-Axis Acceleration Data Low Register
@@ -146,22 +145,22 @@ typedef struct LIS3DHState
     uint8_t ctrl_reg6;          // Accelerometer Control Register 6
     uint8_t reference;          // Reference/Datacapture Register
     uint8_t status_reg;         // Status Register 2
-    uint8_t iut_x_l;            // X-Axis Acceleration Data Low Register
-    uint8_t iut_x_h;            // X-Axis Acceleration Data High Register
-    uint8_t iut_y_l;            // Y-Axis Acceleration Data Low Register
-    uint8_t iut_y_h;            // Y-Axis Acceleration Data High Register
-    uint8_t iut_z_l;            // Z-Axis Acceleration Data Low Register
-    uint8_t iut_z_h;            // Z-Axis Acceleration Data High Register
+    uint8_t out_x_l;            // X-Axis Acceleration Data Low Register
+    uint8_t out_x_h;            // X-Axis Acceleration Data High Register
+    uint8_t out_y_l;            // Y-Axis Acceleration Data Low Register
+    uint8_t out_y_h;            // Y-Axis Acceleration Data High Register
+    uint8_t out_z_l;            // Z-Axis Acceleration Data Low Register
+    uint8_t out_z_h;            // Z-Axis Acceleration Data High Register
     uint8_t fifo_ctrl_reg;      // FIFO Control Register
     uint8_t fifo_src_reg;       // FIFO Source Register
-    uint8_t int1_cfg;           // Interrupt Configuration Register
-    uint8_t int1_src;           // Interrupt Source Register
-    uint8_t int1_ths;           // Interrupt Threshold Register
-    uint8_t int1_duration;      // Interrupt Duration Register
-    uint8_t int2_cfg;           //
-    uint8_t int2_src;           //
-    uint8_t int2_ths;           //
-    uint8_t int2_duration;      //       
+    uint8_t int1_cfg;           // Interrupt 1 Configuration Register
+    uint8_t int1_src;           // Interrupt 1 Source Register
+    uint8_t int1_ths;           // Interrupt 1 Threshold Register
+    uint8_t int1_duration;      // Interrupt 1 Duration Register
+    uint8_t int2_cfg;           // Interrupt 2 Configuration Register
+    uint8_t int2_src;           // Interrupt 2 Source Register
+    uint8_t int2_ths;           // Interrupt 2 Threshold Register
+    uint8_t int2_duration;      // Interrupt 2 Duration Register
     uint8_t click_cfg;          // Interrupt Click Recognition Register
     uint8_t click_src;          // Interrupt Click Source Register
     uint8_t click_ths;          // Interrupt Click Threshold Register
