@@ -9,45 +9,122 @@
 /**********************/
 /*  Basic Functions   */
 /**********************/
-static void lis3dh_update_data(void *opaque)
+static int uint16_t __out_x_gen(void)
 {
-    LIS3DHState *s = opaque;
+    uint16_t x = rand() % 0xFFFF;
+    return x;
+}
+
+static int uint16_t __out_y_gen(void)
+{
+    uint16_t y = rand() % 0xFFFF;
+    return y;
+}
+
+static int uint16_t __out_z_gen(void)
+{
+    uint16_t z = rand() % 0xFFFF;
+    return z;
+}
+
+static void lis3dh_update_data(void *src)
+{
+    LIS3DHState *lis3dh = src;
     
     /* Generate new accelerometer values */
-    // Replace with actual sensor model or test data
-    uint16_t x = rand() % 0xFFFF;
-    uint16_t y = rand() % 0xFFFF;
-    uint16_t z = rand() % 0xFFFF;
-    
+    uint16_t x = __out_x_gen();
+    uint16_t y = __out_y_gen();
+    uint16_t z = __out_z_gen();
     /* Update registers */
-    s->out_x_reg[LIS3DH_OUT_X_H - LIS3DH_OUT_X_L] = x & 0xFF;
-    s->out_x_reg[LIS3DH_OUT_X_L - LIS3DH_OUT_X_L] = (x >> 8) & 0xFF;
-    s->out_y_reg[LIS3DH_OUT_Y_H - LIS3DH_OUT_Y_L] = y & 0xFF;
-    s->out_y_reg[LIS3DH_OUT_Y_L - LIS3DH_OUT_Y_L] = (y >> 8) & 0xFF;
-    s->out_z_reg[LIS3DH_OUT_Z_H - LIS3DH_OUT_Y_L] = z & 0xFF;
-    s->out_z_reg[LIS3DH_OUT_Z_H - LIS3DH_OUT_Y_L] = (z >> 8) & 0xFF;
+    lis3dh->out_x_l = x & 0xFF;
+    lis3dh->out_x_h = (x >> 8) & 0xFF;
+    lis3dh->out_y_l = y & 0xFF;
+    lis3dh->out_y_h = (y >> 8) & 0xFF;
+    lis3dh->out_z_l = z & 0xFF;
+    lis3dh->out_z_h = (z >> 8) & 0xFF;
     
     /* Set data ready flag */
     //s->status_reg |= 0x08;  // Set DRDY bit
     
     /* Reschedule timer */
-    timer_mod(s->timer, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + 
-             NANOSECONDS_PER_SECOND / 100);
+    timer_mod
+    (
+        s->timer, 
+        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
+    );
+}
+
+static void lis3dh_i2c_reset(LIS3DHState *lis3dh)
+{
+    // directions [0x00-0x06] reserved
+    lis3dh->status_reg_aux = LIS3DH_STATUS_REG_AUX_DEF;     // Status Register
+    lis3dh->adc_1_l = LIS3DH_ADC_1_L_DEF;                   // 1-Axis Acceleration Data Low Register
+    lis3dh->adc_1_h = LIS3DH_ADC_1_H_DEF;                   // 1-Axis Acceleration Data High Register
+    lis3dh->adc_2_l = LIS3DH_ADC_2_L_DEF;                   // 2-Axis Acceleration Data Low Register
+    lis3dh->adc_2_h = LIS3DH_ADC_2_H_DEF;                   // 2-Axis Acceleration Data High Register
+    lis3dh->adc_3_l = LIS3DH_ADC_3_L_DEF;                   // 3-Axis Acceleration Data Low Register
+    lis3dh->adc_3_h = LIS3DH_ADC_3_H_DEF;                   // 3-Axis Acceleration Data High Register
+    // direction 0x0E reserved
+    lis3dh->who_am_i = LIS3DH_WHO_AM_I_DEF;                 // Device identification Register 
+    // directions [0x10-0x1D] reserved
+    lis3dh->ctrl_reg0 = LIS3DH_CTRL_REG0_DEF;               //
+    lis3dh->temp_cfg_reg = LIS3DH_TEMP_CFG_REG_DEF;         // Temperature Sensor Register
+    lis3dh->ctrl_reg1 = LIS3DH_CTRL_REG1_DEF;               // Accelerometer Control Register 1
+    lis3dh->ctrl_reg2 = LIS3DH_CTRL_REG2_DEF;               // Accelerometer Control Register 2
+    lis3dh->ctrl_reg3 = LIS3DH_CTRL_REG3_DEF;               // Accelerometer Control Register 3
+    lis3dh->ctrl_reg4 = LIS3DH_CTRL_REG4_DEF;               // Accelerometer Control Register 4
+    lis3dh->ctrl_reg5 = LIS3DH_CTRL_REG5_DEF;               // Accelerometer Control Register 5
+    lis3dh->ctrl_reg6 = LIS3DH_CTRL_REG6_DEF;               // Accelerometer Control Register 6
+    lis3dh->reference = LIS3DH_REFERENCE_DEF;               // Reference/Datacapture Register
+    lis3dh->status_reg = LIS3DH_STATUS_REG_DEF;             // Status Register 2
+    lis3dh->out_x_l = LIS3DH_OUT_X_L_DEF;                   // X-Axis Acceleration Data Low Register
+    lis3dh->out_x_h = LIS3DH_OUT_X_H_DEF;                   // X-Axis Acceleration Data High Register
+    lis3dh->out_y_l = LIS3DH_OUT_Y_L_DEF;                   // Y-Axis Acceleration Data Low Register
+    lis3dh->out_y_h = LIS3DH_OUT_Y_H_DEF;                   // Y-Axis Acceleration Data High Register
+    lis3dh->out_z_l = LIS3DH_OUT_Z_L_DEF;                   // Z-Axis Acceleration Data Low Register
+    lis3dh->out_z_h = LIS3DH_OUT_Z_H_DEF;                   // Z-Axis Acceleration Data High Register
+    lis3dh->fifo_ctrl_reg = LIS3DH_FIFO_CTRL_REG_DEF;       // FIFO Control Register
+    lis3dh->fifo_src_reg = LIS3DH_FIFO_SRC_REG_DEF;         // FIFO Source Register
+    lis3dh->int1_cfg = LIS3DH_INT1_CFG_DEF;                 // Interrupt Configuration Register
+    lis3dh->int1_src = LIS3DH_INT1_SRC_DEF;                 // Interrupt Source Register
+    lis3dh->int1_ths = LIS3DH_INT1_THS_DEF;                 // Interrupt Threshold Register
+    lis3dh->int1_duration = LIS3DH_INT1_DURATION_DEF;       // Interrupt Duration Register
+    lis3dh->int2_cfg = LIS3DH_INT2_CFG_DEF;                 //
+    lis3dh->int2_src = LIS3DH_INT2_SRC_DEF;                 //
+    lis3dh->int2_ths = LIS3DH_INT2_THS_DEF;                 //
+    lis3dh->int2_duration = LIS3DH_INT2_DURATION_DEF;       //       
+    lis3dh->click_cfg = LIS3DH_CLICK_CFG_DEF;               // Interrupt Click Recognition Register
+    lis3dh->click_src = LIS3DH_CLICK_SRC_DEF;               // Interrupt Click Source Register
+    lis3dh->click_ths = LIS3DH_CLICK_THS_DEF;               // Interrupt Click Threshold Register
+    lis3dh->time_limit = LIS3DH_TIME_LIMIT_DEF;             // Click Time Limit Register
+    lis3dh->time_latency = LIS3DH_TIME_LATENCY_DEF;         // Click Time Latency Register
+    lis3dh->time_window = LIS3DH_TIME_WINDOW_DEF;           // Click Time Window Register
+    lis3dh->act_ths = LIS3DH_ACT_THS_DEF;                   //
+    lis3dh->act_dur = LIS3DH_ACT_DUR_DEF;                   //
 }
 
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 {
-    LIS3DHState *s = LIS3DH_I2C(dev);
+    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
     
     /* Initialize I2C state */
-    s->pointer = 0xFF;  // Invalid initial pointer
-    s->command_phase = true;
-    
+    lis3dh->address         = LIS3DH_ADDRESS;
+	lis3dh->ptr             = 0xFF;
+	lis3dh->auto_increment  = false;
+	lis3dh->data_ready      = false;
+	lis3dh->address_phase;  = false;
+
     /* Create data update timer */
-    s->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_update_data, s);
-    timer_mod(s->timer, 
-        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100); // 100Hz update
+    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_update_data, s);
+    timer_mod
+    (
+        lis3dh->timer, 
+        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
+    ); // 100Hz update
     
+    /* Reset registers */
+    lis3dh_i2c_reset(lis3dh);
+        
     /* Enable hotplug */
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
     dc->hotpluggable = true;
@@ -55,52 +132,11 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 
 static void lis3dh_i2c_unrealize(DeviceState *dev)
 {
-    LIS3DHState *s = LIS3DH_I2C(dev);
+    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
 
-    timer_del(s->timer);
-    timer_free(s->timer);
+    timer_del(lis3dh->timer);
+    timer_free(lis3dh->timer);
 }
-
-/*
-static void lis3dh_i2c_reset(DeviceState *dev)
-{
-    LIS3DHState *lis3dh     = LIS3DH_I2C(dev);
-
-    lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_DEFAULT;        //Default: Output
-    
-    //memset( lis3dh->adc_reg, 0, 0x07 );                         //Default: Output
-    
-    lis3dh->who_am_i        = LIS3DH_WHO_AM_I_DEFAULT;          //Default: 00110011 (default in write)
-    
-    //lis3dh->ctrl_reg[0x00]  = LIS3DH_CTRL_REG0_DEFAULT;         //Default: 00010000
-    //lis3dh->ctrl_reg[0x01]  = LIS3DH_TEMP_CFG_REG_DEFAULT;      //Default: 0
-    //lis3dh->ctrl_reg[0x02]  = LIS3DH_CTRL_REG1_DEFAULT;         //Default: 00000111
-    //memset( ((lis3dh->ctrl_reg)+2), 0, 0x06 );                  //Default: 0
-
-    lis3dh->reference_reg       = LIS3DH_REFERENCE_DEFAULT;         //Default: 0
-    //lis3dh->status_reg      = LIS3DH_STATUS_REG_DEFAULT;        //Default: Output
-    
-    memset( lis3dh->out_x_reg,  0, 0x02 );                      //Default: Output
-    memset( lis3dh->out_y_reg,  0, 0x02 );                      //Default: Output
-    memset( lis3dh->out_z_reg,  0, 0x02 );                      //Default: Output
-    
-    //lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEFAULT;     //Default: 0
-    //lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEFAULT;      //Default: Output
-    
-    //memset( lis3dh->int1_reg,   0, 0x04 );                      //Default:  
-    //memset( lis3dh->int2_reg,   0, 0x04 );                      //Default:
-   
-    lis3dh->click_cfg       = LIS3DH_CLICK_CFG_DEFAULT;         //Default: 0
-    lis3dh->click_src       = LIS3DH_CLICK_SRC_DEFAULT;         //Default: Output
-    lis3dh->click_ths       = LIS3DH_CLICK_CFG_DEFAULT;         //Default: 0
-
-    lis3dh->time_limit      = LIS3DH_TIME_LIMIT_DEFAULT;        //Default: 0
-    lis3dh->time_latency    = LIS3DH_TIME_LATENCY_DEFAULT;      //Default: 0
-    lis3dh->time_window     = LIS3DH_TIME_WINDOW_DEFAULT;       //Default: 0
-
-    //memset( lis3dh->act_reg, 0, 0x02 );                         //Default: 0
-}
-*/
 
 /********************/
 /*  I2C Functions   */
@@ -112,32 +148,33 @@ static void set_register_value(LIS3DHState *src, uint8_t pointer, uint8_t data)
 
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 {
-    LIS3DHState *s = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
     
     switch (event) 
     {
-        case I2C_START_SEND:  // Start of write operation
-            s->command_phase = true;
-            s->pointer = 0xFF;  // Reset pointer
+        case I2C_START_SEND:    // Start of write operation
+            /* Master is starting a WRITE operation (sending data to the device) */
+            
             break;
             
-        case I2C_START_RECV:  // Start of read operation
-            // If no pointer set, default to first register
-            if (s->pointer == 0xFF)
-            {
-                s->pointer = LIS3DH_STATUS_REG_AUX;
-            }
+        case I2C_START_RECV:    // Start of read operation
+            /* Master is starting a READ operation (requesting data from the device) */
+
             break;
             
-        case I2C_FINISH:      // Stop condition
-            s->command_phase = false;
+        case I2C_FINISH:        // Stop condition
+            /* Master ends the transaction (STOP condition) */
+
             break;
             
-        case I2C_NACK:        // NACK received
+        case I2C_NACK:          // NACK received
+            /* Master didn't acknowledge the data */
+            
             break;
         
         default:
-            break;
+            // Should never happen
+            return -1;
     }
     return 0;
 }
@@ -168,150 +205,7 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
     switch (s->pointer)
     {
         case LIS3DH_STATUS_REG    :
-
             break;
-
-        /*
-        case LIS3DH_ADC_1_L       :
-            val = s->adc_reg[LIS3DH_ADC_1_L - LIS3DH_ADC_1_L];
-            break;
-
-        case LIS3DH_ADC_1_H       :
-            val = s->adc_reg[LIS3DH_ADC_1_H - LIS3DH_ADC_1_L];
-            break;
-
-        case LIS3DH_ADC_2_L       :
-            val = s->adc_reg[LIS3DH_ADC_2_L - LIS3DH_ADC_1_L];
-            break;
-
-        case LIS3DH_ADC_2_H       :
-            val = s->adc_reg[LIS3DH_ADC_2_H- LIS3DH_ADC_1_L];
-            break;
-
-        case LIS3DH_ADC_3_L       :
-            val = s->adc_reg[LIS3DH_ADC_3_L - LIS3DH_ADC_1_L];
-            break;
-
-        case LIS3DH_ADC_3_H       :
-            val = s->adc_reg[LIS3DH_ADC_3_H - LIS3DH_ADC_1_L];
-            break;
-
-        case LIS3DH_WHO_AM_I      :
-            val = LIS3DH_WHO_AM_I_DEFAULT;
-            break;
-
-        case LIS3DH_CTRL_REG0     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG0 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_TEMP_CFG_REG  :
-            val = s->ctrl_reg[LIS3DH_TEMP_CFG_REG - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_CTRL_REG1     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG1 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_CTRL_REG2     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG2 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_CTRL_REG3     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG3 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_CTRL_REG4     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG4 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_CTRL_REG5     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG5 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_CTRL_REG6     :
-            val = s->ctrl_reg[LIS3DH_CTRL_REG6 - LIS3DH_CTRL_REG0];
-            break;
-
-        case LIS3DH_REFERENCE     :
-            val = LIS3DH_REFERENCE
-            break;
-
-        case LIS3DH_STATUS_REG    :
-            val = LIS3DH_STATUS_REG
-            break;
-
-        case LIS3DH_OUT_X_L       :
-            break;
-
-        case LIS3DH_OUT_X_H       :
-            break;
-
-        case LIS3DH_OUT_Y_L       :
-            break;
-
-        case LIS3DH_OUT_Y_H       :
-            break;
-
-        case LIS3DH_OUT_Z_L       :
-            break;
-
-        case LIS3DH_OUT_Z_H       :
-            break;
-
-        case LIS3DH_FIFO_CTRL_REG :
-            break;
-
-        case LIS3DH_FIFO_SRC_REG  :
-            break;
-
-        case LIS3DH_INT1_CFG      :
-            break;
-
-        case LIS3DH_INT1_SRC      :
-            break;
-
-        case LIS3DH_INT1_THS      :
-            break;
-
-        case LIS3DH_INT1_DURATION :
-            break;
-
-        case LIS3DH_INT2_CFG      :
-            break;
-
-        case LIS3DH_INT2_SRC      :
-            break;
-
-        case LIS3DH_INT2_THS      :
-            break;
-
-        case LIS3DH_INT2_DURATION :
-            break;
-            
-        case LIS3DH_CLICK_CFG     :
-            break;
-
-        case LIS3DH_CLICK_SRC     :
-            break;
-
-        case LIS3DH_CLICK_THS     :
-            break;
-        
-        case LIS3DH_TIME_LIMIT    :
-            break;
-        
-        case LIS3DH_TIME_LATENCY  :
-            break;
-
-        case LIS3DH_TIME_WINDOW   :
-            break;
-
-        case LIS3DH_ACT_THS       :
-            break;
-
-        case LIS3DH_ACT_DUR       :
-            break;
-        */
         default                   :
             break;
     }
@@ -319,20 +213,19 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
     return val;
 }
 
+
 /*********************/
 /* Type Registration */
 /*********************/
-
 /* LIS3DH class initialization */
 static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
 {
-    DeviceClass *dc     = DEVICE_CLASS(kclass);      // The generic device class operations
-    I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);   // The I2C-specific interface implementation
+    DeviceClass *dc     = DEVICE_CLASS(kclass);     // The generic device class operations
+    I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);  // The I2C-specific interface implementation
     
     /* Device lifecycle */
     dc->realize     = lis3dh_i2c_realize;           // Called when device created
     dc->unrealize   = lis3dh_i2c_unrealize;         // Cleanup
-    //dc->reset       = lis3dh_i2c_reset;             // On system reset
     dc->desc        = "I2C accelerometer: LIS3DH"; 
     
     /* I2C protocol implementation */
@@ -342,7 +235,8 @@ static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
 }
 
 /* Tells QEMU’s type system how to create and wire the LIS3DH object class. */
-static const TypeInfo lis3dh_i2c_info = {
+static const TypeInfo lis3dh_i2c_info = 
+{
     .name           = TYPE_LIS3DH_I2C, 
     .parent         = TYPE_I2C_SLAVE,
     .instance_size  = sizeof(LIS3DHState),
@@ -350,9 +244,9 @@ static const TypeInfo lis3dh_i2c_info = {
 };
 
 /* Add LIS3DH object class into Qemu core */
-static void lis3dh_i2c_regster_types(void)
+static void lis3dh_i2c_register_types(void)
 {
     type_register_static(&lis3dh_i2c_info);
 }
 
-type_init(lis3dh_i2c_regster_types);
+type_init(lis3dh_i2c_register_types);
