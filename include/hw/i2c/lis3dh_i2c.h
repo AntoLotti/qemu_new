@@ -77,8 +77,8 @@
 #define LIS3DH_ACT_DUR              0x3F    // 
 
 /* Default */
-#define LIS3DH_REGS_DEF         0x00
-#define LIS3DH_OUTPUTS_DEF      0x00
+#define LIS3DH_REGS_DEF             0x00
+#define LIS3DH_OUTPUTS_DEF          0x00
 
 // directions [0x00-0x06] reserved
 #define LIS3DH_STATUS_REG_AUX_DEF       LIS3DH_OUTPUTS_DEF      // Status Register
@@ -152,7 +152,8 @@ typedef struct LIS3DHState
 	uint8_t ptr;           // Current register pointer
 	bool auto_increment;   // Auto-advance pointer after access
 	bool data_ready;       // Data ready flag
-	bool command_phase;    // I2C command phase tracker
+	bool address_phase;    // I2C command phase tracker
+    QEMUTimer *timer;      // Data update timer
 
     /* Registers */
     // directions [0x00-0x06] reserved
