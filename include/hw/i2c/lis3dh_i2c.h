@@ -31,7 +31,7 @@
 
 /* Directions */
 // directions [0x00-0x06] reserved
-#define LIS3DH_STATUS_REG_AUX       0x07    // Status Register
+#define LIS3DH_STATUS_REG_AUX       0x07    // Status Register 2
 #define LIS3DH_ADC_1_L              0x08    // 1-Axis Acceleration Data Low Register
 #define LIS3DH_ADC_1_H              0x09    // 1-Axis Acceleration Data High Register
 #define LIS3DH_ADC_2_L              0x0A    // 2-Axis Acceleration Data Low Register
@@ -50,7 +50,7 @@
 #define LIS3DH_CTRL_REG5            0x24    // Accelerometer Control Register 5
 #define LIS3DH_CTRL_REG6            0x25    // Accelerometer Control Register 6
 #define LIS3DH_REFERENCE            0x26    // Reference/Datacapture Register
-#define LIS3DH_STATUS_REG           0x27    // Status Register 2
+#define LIS3DH_STATUS_REG           0x27    // Status Register
 #define LIS3DH_OUT_X_L              0x28    // X-Axis Acceleration Data Low Register
 #define LIS3DH_OUT_X_H              0x29    // X-Axis Acceleration Data High Register
 #define LIS3DH_OUT_Y_L              0x2A    // Y-Axis Acceleration Data Low Register
@@ -128,8 +128,8 @@
 
 #define LIS3DH_ADDRESS                  0x19                    // 0x33 >> 1 
 
-#define LIS3DH_SUB_REG_MASK             0xFE                    // Mask to get the LIS3DH register direcction
-#define LIS3DH_SUB_AUTO_INC_MASK        0x01                    // Mask to get the Auto-increment bit
+#define LIS3DH_SUB_REG_MASK             0x7F                    // Mask to get the LIS3DH register direcction
+#define LIS3DH_SUB_AUTO_INC_MASK        0x80                    // Mask to get the Auto-increment bit
 
 
 /************************/
@@ -141,6 +141,14 @@
 #define TYPE_LIS3DH_I2C "lis3dh-i2c"
 OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH_I2C);
 
+/*
+static typedef struct reg_s
+{
+    uint8_t reg_data;
+    bool write;
+}reg_t;
+*/
+
 /* LIS3DH State struct requirements (the hardware) */
 typedef struct LIS3DHState
 {
@@ -151,7 +159,7 @@ typedef struct LIS3DHState
     uint8_t address;       // 7-bit I2C address
 	uint8_t ptr;           // Current register pointer
 	bool auto_increment;   // Auto-advance pointer after access
-	bool data_ready;       // Data ready flag
+	//bool data_ready;       // Data ready flag
 	bool address_phase;    // I2C command phase tracker
     QEMUTimer *timer;      // Data update timer
 

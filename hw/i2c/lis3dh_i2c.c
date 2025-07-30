@@ -9,19 +9,19 @@
 /**********************/
 /*  Basic Functions   */
 /**********************/
-static int uint16_t __out_x_gen(void)
+static uint16_t __out_x_gen(void)
 {
     uint16_t x = rand() % 0xFFFF;
     return x;
 }
 
-static int uint16_t __out_y_gen(void)
+static uint16_t __out_y_gen(void)
 {
     uint16_t y = rand() % 0xFFFF;
     return y;
 }
 
-static int uint16_t __out_z_gen(void)
+static uint16_t __out_z_gen(void)
 {
     uint16_t z = rand() % 0xFFFF;
     return z;
@@ -49,7 +49,7 @@ static void lis3dh_update_data(void *src)
     /* Reschedule timer */
     timer_mod
     (
-        s->timer, 
+        lis3dh->timer, 
         qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
     );
 }
@@ -111,11 +111,11 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
     lis3dh->address         = LIS3DH_ADDRESS;
 	lis3dh->ptr             = 0xFF;
 	lis3dh->auto_increment  = false;
-	lis3dh->data_ready      = false;
-	lis3dh->address_phase;  = false;
+	//lis3dh->data_ready      = false;
+	lis3dh->address_phase   = false;
 
     /* Create data update timer */
-    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_update_data, s);
+    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_update_data, lis3dh);
     timer_mod
     (
         lis3dh->timer, 
@@ -138,12 +138,56 @@ static void lis3dh_i2c_unrealize(DeviceState *dev)
     timer_free(lis3dh->timer);
 }
 
+
 /********************/
 /*  I2C Functions   */
 /********************/
-static void set_register_value(LIS3DHState *src, uint8_t pointer, uint8_t data)
+static bool __reserved_address( uint8_t src)
 {
-    printf("\n hola \n");
+    if ( src == 0x0E )
+            return true;
+
+    for ( uint8_t i = 0x00; i < 0x07; i++ )
+    {
+        if ( src == i )
+            return true;
+    }
+
+    for ( uint8_t j = 0x10; j < 0x1; j++ )
+    {
+        if ( src == j )
+            return true;
+    }
+
+    return false;
+}
+
+static bool write_reg( LIS3DHState *dst, uint8_t dir, uint8_t src )
+{
+    if ( __reserved_address(dir) ) //#TODO print error message
+        return false;
+    
+    switch (dir)
+    {
+        case LIS3DH_CTRL_REG0:
+            dst->ctrl_reg0 = src;
+            break;
+
+        default:
+            //#TODO print error message
+            break;
+    }
+
+    return true;
+
+}
+
+static int find_reg( LIS3DHState *src )
+{
+    if( src->ptr == LIS3DH_WHO_AM_I )
+        return src->who_am_i;
+    
+    return 0x00;
 }
 
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
@@ -153,23 +197,31 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
     switch (event) 
     {
         case I2C_START_SEND:    // Start of write operation
-            /* Master is starting a WRITE operation (sending data to the device) */
-            
+            /* Master is starting a WRITE operation 
+            (sending data to the device) */
+            lis3dh->ptr             = 0xFF;
+			lis3dh->auto_increment  = false;
+			//lis3dh->data_ready      = false;
+			lis3dh->address_phase   = true;    // next data register addres
             break;
             
         case I2C_START_RECV:    // Start of read operation
-            /* Master is starting a READ operation (requesting data from the device) */
-
+            /* Master is starting a READ operation 
+            (requesting data from the device) */
+			if (lis3dh->ptr == 0xFF)
+			{
+				lis3dh->ptr = LIS3DH_WHO_AM_I;
+			}
+			lis3dh->address_phase = false;
             break;
             
         case I2C_FINISH:        // Stop condition
-            /* Master ends the transaction (STOP condition) */
-
+            /* Master ends the transaction 
+            (STOP condition) */			
             break;
             
         case I2C_NACK:          // NACK received
             /* Master didn't acknowledge the data */
-            
             break;
         
         default:
@@ -181,36 +233,27 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 
 static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
-    LIS3DHState *s = LIS3DH_I2C(i2c);
-    
-    if (s->command_phase) 
-    {
-        // First byte is register address
-        s->pointer = data;
-        s->command_phase = false;
-    } else 
-    {
-        // Write to register
-        set_register_value(s, s->pointer, data);
-        s->pointer++;
-    }
-    return 0;
+    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+
+	if (lis3dh->ptr == 0xFF)
+	{
+		lis3dh->ptr = data & LIS3DH_SUB_REG_MASK;
+		lis3dh->auto_increment =  
+			(data & LIS3DH_SUB_AUTO_INC_MASK) != 0x00 ? true : false;
+		lis3dh->address_phase = false;
+	}else
+	{
+		write_reg( lis3dh, lis3dh->ptr, data);
+		if (lis3dh->auto_increment)
+			lis3dh->ptr++; //#TODO
+	}
+	return 0;
 }
 
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 {
-    LIS3DHState *s = LIS3DH_I2C(i2c);
-    uint8_t val = 0x00;
-    
-    switch (s->pointer)
-    {
-        case LIS3DH_STATUS_REG    :
-            break;
-        default                   :
-            break;
-    }
-    
-    return val;
+    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+	return find_reg( lis3dh );
 }
 
 
@@ -218,7 +261,7 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 /* Type Registration */
 /*********************/
 /* LIS3DH class initialization */
-static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
+static void lis3dh_i2c_class_init( ObjectClass *kclass, const void *data )
 {
     DeviceClass *dc     = DEVICE_CLASS(kclass);     // The generic device class operations
     I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);  // The I2C-specific interface implementation
