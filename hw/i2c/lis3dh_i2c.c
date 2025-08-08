@@ -6,9 +6,9 @@
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 
-/**********************/
-/*  Basic Functions   */
-/**********************/
+/**************************************************************************
+    ACCELEROMETER DATA GENERATION
+**************************************************************************/
 static uint16_t __out_x_gen(void)
 {
     uint16_t x = rand() % 0xFFFF;
@@ -27,7 +27,10 @@ static uint16_t __out_z_gen(void)
     return z;
 }
 
-static void lis3dh_update_data(void *src)
+/**************************************************************************
+    DEVICE LIFE FUNCTIONS
+**************************************************************************/
+static void _lis3dh_update_data(void *src)
 {
     LIS3DHState *lis3dh = src;
     
@@ -54,53 +57,53 @@ static void lis3dh_update_data(void *src)
     );
 }
 
-static void lis3dh_i2c_reset(LIS3DHState *lis3dh)
+static void _lis3dh_i2c_reset(LIS3DHState *lis3dh)
 {
     // directions [0x00-0x06] reserved
-    lis3dh->status_reg_aux = LIS3DH_STATUS_REG_AUX_DEF;     // Status Register
-    lis3dh->adc_1_l = LIS3DH_ADC_1_L_DEF;                   // 1-Axis Acceleration Data Low Register
-    lis3dh->adc_1_h = LIS3DH_ADC_1_H_DEF;                   // 1-Axis Acceleration Data High Register
-    lis3dh->adc_2_l = LIS3DH_ADC_2_L_DEF;                   // 2-Axis Acceleration Data Low Register
-    lis3dh->adc_2_h = LIS3DH_ADC_2_H_DEF;                   // 2-Axis Acceleration Data High Register
-    lis3dh->adc_3_l = LIS3DH_ADC_3_L_DEF;                   // 3-Axis Acceleration Data Low Register
-    lis3dh->adc_3_h = LIS3DH_ADC_3_H_DEF;                   // 3-Axis Acceleration Data High Register
+    lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_AUX_DEF;    // Status Register
+    lis3dh->adc_1_l         = LIS3DH_ADC_1_L_DEF;           // 1-Axis Acceleration Data Low Register
+    lis3dh->adc_1_h         = LIS3DH_ADC_1_H_DEF;           // 1-Axis Acceleration Data High Register
+    lis3dh->adc_2_l         = LIS3DH_ADC_2_L_DEF;           // 2-Axis Acceleration Data Low Register
+    lis3dh->adc_2_h         = LIS3DH_ADC_2_H_DEF;           // 2-Axis Acceleration Data High Register
+    lis3dh->adc_3_l         = LIS3DH_ADC_3_L_DEF;           // 3-Axis Acceleration Data Low Register
+    lis3dh->adc_3_h         = LIS3DH_ADC_3_H_DEF;           // 3-Axis Acceleration Data High Register
     // direction 0x0E reserved
-    lis3dh->who_am_i = LIS3DH_WHO_AM_I_DEF;                 // Device identification Register 
+    lis3dh->who_am_i        = LIS3DH_WHO_AM_I_DEF;          // Device identification Register 
     // directions [0x10-0x1D] reserved
-    lis3dh->ctrl_reg0 = LIS3DH_CTRL_REG0_DEF;               //
-    lis3dh->temp_cfg_reg = LIS3DH_TEMP_CFG_REG_DEF;         // Temperature Sensor Register
-    lis3dh->ctrl_reg1 = LIS3DH_CTRL_REG1_DEF;               // Accelerometer Control Register 1
-    lis3dh->ctrl_reg2 = LIS3DH_CTRL_REG2_DEF;               // Accelerometer Control Register 2
-    lis3dh->ctrl_reg3 = LIS3DH_CTRL_REG3_DEF;               // Accelerometer Control Register 3
-    lis3dh->ctrl_reg4 = LIS3DH_CTRL_REG4_DEF;               // Accelerometer Control Register 4
-    lis3dh->ctrl_reg5 = LIS3DH_CTRL_REG5_DEF;               // Accelerometer Control Register 5
-    lis3dh->ctrl_reg6 = LIS3DH_CTRL_REG6_DEF;               // Accelerometer Control Register 6
-    lis3dh->reference = LIS3DH_REFERENCE_DEF;               // Reference/Datacapture Register
-    lis3dh->status_reg = LIS3DH_STATUS_REG_DEF;             // Status Register 2
-    lis3dh->out_x_l = LIS3DH_OUT_X_L_DEF;                   // X-Axis Acceleration Data Low Register
-    lis3dh->out_x_h = LIS3DH_OUT_X_H_DEF;                   // X-Axis Acceleration Data High Register
-    lis3dh->out_y_l = LIS3DH_OUT_Y_L_DEF;                   // Y-Axis Acceleration Data Low Register
-    lis3dh->out_y_h = LIS3DH_OUT_Y_H_DEF;                   // Y-Axis Acceleration Data High Register
-    lis3dh->out_z_l = LIS3DH_OUT_Z_L_DEF;                   // Z-Axis Acceleration Data Low Register
-    lis3dh->out_z_h = LIS3DH_OUT_Z_H_DEF;                   // Z-Axis Acceleration Data High Register
-    lis3dh->fifo_ctrl_reg = LIS3DH_FIFO_CTRL_REG_DEF;       // FIFO Control Register
-    lis3dh->fifo_src_reg = LIS3DH_FIFO_SRC_REG_DEF;         // FIFO Source Register
-    lis3dh->int1_cfg = LIS3DH_INT1_CFG_DEF;                 // Interrupt Configuration Register
-    lis3dh->int1_src = LIS3DH_INT1_SRC_DEF;                 // Interrupt Source Register
-    lis3dh->int1_ths = LIS3DH_INT1_THS_DEF;                 // Interrupt Threshold Register
-    lis3dh->int1_duration = LIS3DH_INT1_DURATION_DEF;       // Interrupt Duration Register
-    lis3dh->int2_cfg = LIS3DH_INT2_CFG_DEF;                 //
-    lis3dh->int2_src = LIS3DH_INT2_SRC_DEF;                 //
-    lis3dh->int2_ths = LIS3DH_INT2_THS_DEF;                 //
-    lis3dh->int2_duration = LIS3DH_INT2_DURATION_DEF;       //       
-    lis3dh->click_cfg = LIS3DH_CLICK_CFG_DEF;               // Interrupt Click Recognition Register
-    lis3dh->click_src = LIS3DH_CLICK_SRC_DEF;               // Interrupt Click Source Register
-    lis3dh->click_ths = LIS3DH_CLICK_THS_DEF;               // Interrupt Click Threshold Register
-    lis3dh->time_limit = LIS3DH_TIME_LIMIT_DEF;             // Click Time Limit Register
-    lis3dh->time_latency = LIS3DH_TIME_LATENCY_DEF;         // Click Time Latency Register
-    lis3dh->time_window = LIS3DH_TIME_WINDOW_DEF;           // Click Time Window Register
-    lis3dh->act_ths = LIS3DH_ACT_THS_DEF;                   //
-    lis3dh->act_dur = LIS3DH_ACT_DUR_DEF;                   //
+    lis3dh->ctrl_reg0       = LIS3DH_CTRL_REG0_DEF;         //
+    lis3dh->temp_cfg_reg    = LIS3DH_TEMP_CFG_REG_DEF;      // Temperature Sensor Register
+    lis3dh->ctrl_reg1       = LIS3DH_CTRL_REG1_DEF;         // Accelerometer Control Register 1
+    lis3dh->ctrl_reg2       = LIS3DH_CTRL_REG2_DEF;         // Accelerometer Control Register 2
+    lis3dh->ctrl_reg3       = LIS3DH_CTRL_REG3_DEF;         // Accelerometer Control Register 3
+    lis3dh->ctrl_reg4       = LIS3DH_CTRL_REG4_DEF;         // Accelerometer Control Register 4
+    lis3dh->ctrl_reg5       = LIS3DH_CTRL_REG5_DEF;         // Accelerometer Control Register 5
+    lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
+    lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
+    lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
+    lis3dh->out_x_l         = LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
+    lis3dh->out_x_h         = LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
+    lis3dh->out_y_l         = LIS3DH_OUT_Y_L_DEF;           // Y-Axis Acceleration Data Low Register
+    lis3dh->out_y_h         = LIS3DH_OUT_Y_H_DEF;           // Y-Axis Acceleration Data High Register
+    lis3dh->out_z_l         = LIS3DH_OUT_Z_L_DEF;           // Z-Axis Acceleration Data Low Register
+    lis3dh->out_z_h         = LIS3DH_OUT_Z_H_DEF;           // Z-Axis Acceleration Data High Register
+    lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEF;     // FIFO Control Register
+    lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEF;      // FIFO Source Register
+    lis3dh->int1_cfg        = LIS3DH_INT1_CFG_DEF;          // Interrupt Configuration Register
+    lis3dh->int1_src        = LIS3DH_INT1_SRC_DEF;          // Interrupt Source Register
+    lis3dh->int1_ths        = LIS3DH_INT1_THS_DEF;          // Interrupt Threshold Register
+    lis3dh->int1_duration   = LIS3DH_INT1_DURATION_DEF;     // Interrupt Duration Register
+    lis3dh->int2_cfg        = LIS3DH_INT2_CFG_DEF;          //
+    lis3dh->int2_src        = LIS3DH_INT2_SRC_DEF;          //
+    lis3dh->int2_ths        = LIS3DH_INT2_THS_DEF;          //
+    lis3dh->int2_duration   = LIS3DH_INT2_DURATION_DEF;     //       
+    lis3dh->click_cfg       = LIS3DH_CLICK_CFG_DEF;         // Interrupt Click Recognition Register
+    lis3dh->click_src       = LIS3DH_CLICK_SRC_DEF;         // Interrupt Click Source Register
+    lis3dh->click_ths       = LIS3DH_CLICK_THS_DEF;         // Interrupt Click Threshold Register
+    lis3dh->time_limit      = LIS3DH_TIME_LIMIT_DEF;        // Click Time Limit Register
+    lis3dh->time_latency    = LIS3DH_TIME_LATENCY_DEF;      // Click Time Latency Register
+    lis3dh->time_window     = LIS3DH_TIME_WINDOW_DEF;       // Click Time Window Register
+    lis3dh->act_ths         = LIS3DH_ACT_THS_DEF;           //
+    lis3dh->act_dur         = LIS3DH_ACT_DUR_DEF;           //
 }
 
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
@@ -115,7 +118,7 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 	lis3dh->address_phase   = false;
 
     /* Create data update timer */
-    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_update_data, lis3dh);
+    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, _lis3dh_update_data, lis3dh);
     timer_mod
     (
         lis3dh->timer, 
@@ -123,7 +126,7 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
     ); // 100Hz update
     
     /* Reset registers */
-    lis3dh_i2c_reset(lis3dh);
+    _lis3dh_i2c_reset(lis3dh);
         
     /* Enable hotplug */
     DeviceClass *dc = DEVICE_GET_CLASS(dev);
@@ -139,9 +142,9 @@ static void lis3dh_i2c_unrealize(DeviceState *dev)
 }
 
 
-/********************/
-/*  I2C Functions   */
-/********************/
+/**************************************************************************
+    I2C FUNCTIONS
+**************************************************************************/
 static bool __reserved_address( uint8_t src)
 {
     if ( src == 0x0E )
@@ -256,10 +259,9 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 	return find_reg( lis3dh );
 }
 
-
-/*********************/
-/* Type Registration */
-/*********************/
+/**************************************************************************
+    LIS3DH REGISTRATION IN QEMU 
+**************************************************************************/
 /* LIS3DH class initialization */
 static void lis3dh_i2c_class_init( ObjectClass *kclass, const void *data )
 {
