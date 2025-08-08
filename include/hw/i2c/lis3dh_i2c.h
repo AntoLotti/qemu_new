@@ -141,15 +141,12 @@
 #define LIS3DH_ACT_DUR_DEF                  LIS3DH_REGS_DEF     // 
 
 
-/************************/
-/*  Device Structure    */
-/*  and Initialization  */
-/************************/
-
+/**************************************************************************
+    DEVICE STRUCTURES AND QOM DCLARATION
+**************************************************************************/
 /* Declaration of the QOM for the LIS3DH */
 #define TYPE_LIS3DH_I2C "lis3dh-i2c"
 OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH_I2C);
-
 
 /* LIS3DH State struct requirements (the hardware) */
 typedef struct LIS3DHState
