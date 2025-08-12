@@ -140,6 +140,17 @@
 #define LIS3DH_ACT_THS_DEF                  LIS3DH_REGS_DEF     // 
 #define LIS3DH_ACT_DUR_DEF                  LIS3DH_REGS_DEF     // 
 
+/**************************************************************************
+    ACCELERATION CONSTANT (m/s²)
+**************************************************************************/
+#define LIS3DH_ACCELERATION_CONST   (9.81f)   //
+
+/**************************************************************************
+    PRIVET MACROS (m/s²)
+**************************************************************************/
+#define CASE_READ_RETURN(REG, FIELD)    case REG: return src->FIELD; break;
+
+#define CASE_WRITE_RETURN(REG, FIELD)   case REG: dst->FIELD = src; return true; break;
 
 /**************************************************************************
     DEVICE STRUCTURES AND QOM DCLARATION
