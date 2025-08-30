@@ -30,7 +30,7 @@
 #include "qom/object.h"
 
 /**************************************************************************
-    ACCELEROMETER REGISTERS ADDRESSES
+    ACCELEROMETER ADDRESSES
 **************************************************************************/
 #define LIS3DH_DEFAULT_ADDRESS          ((uint8_t)0x18 << 1)    // if SDO/SA0 = 1 -> 0001 1000, then 0001 1000 << 1 = 00011 0000
 #define LIS3DH_ALTERNATIVE_ADDRESS      ((uint16_t)(0x19 << 1)) // if SDO/SA0 = 0 -> 0001 1001, then 0001 1001 << 1 = 00011 0010 
@@ -50,7 +50,7 @@
 #define LIS3DH_REG_ACCEL_OUT_ADC3_L         ((uint8_t)(0x0C))	// 3-Axis Acceleration Data Low Register
 #define LIS3DH_REG_ACCEL_OUT_ADC3_H         ((uint8_t)(0x0D))	// 3-Axis Acceleration Data High Register
 // direction 0x0E reserved
-#define LIS3DHTR_REG_ACCEL_WHO_AM_I         ((uint8_t)(0x0F))	// Device identification Register
+#define LIS3DH_REG_ACCEL_WHO_AM_I           ((uint8_t)(0x0F))	// Device identification Register
 // directions [0x10-0x1D] reserved
 #define LIS3DH_REG_CTRL_REG0                ((uint8_t)(0x1E))	//
 #define LIS3DH_REG_TEMP_CFG_REG             ((uint8_t)(0x1F))	// Temperature Sensor Register
@@ -153,7 +153,7 @@
 #define CASE_WRITE_RETURN(REG, FIELD)   case REG: dst->FIELD = src; return true; break;
 
 /**************************************************************************
-    DEVICE STRUCTURES AND QOM DCLARATION
+    DEVICE STRUCTURES AND QOM DECLARATION
 **************************************************************************/
 /* Declaration of the QOM for the LIS3DH */
 #define TYPE_LIS3DH_I2C "lis3dh-i2c"

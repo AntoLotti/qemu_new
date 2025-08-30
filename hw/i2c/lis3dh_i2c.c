@@ -281,7 +281,7 @@ static bool __write_in_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
         CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC2_H, adc_2_h)
         CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_L, adc_3_l)
         CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_H, adc_3_h)
-        CASE_WRITE_RETURN(LIS3DHTR_REG_ACCEL_WHO_AM_I, who_am_i)
+        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_WHO_AM_I, who_am_i)
         CASE_WRITE_RETURN(LIS3DH_REG_CTRL_REG0, ctrl_reg0)
         CASE_WRITE_RETURN(LIS3DH_REG_TEMP_CFG_REG, temp_cfg_reg)
         CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG1, ctrl_reg1)
@@ -341,7 +341,7 @@ static uint8_t __read_register( LIS3DHState *src )
         CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC2_H, adc_2_h)
         CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_L, adc_3_l)
         CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_H, adc_3_h)
-        CASE_READ_RETURN(LIS3DHTR_REG_ACCEL_WHO_AM_I, who_am_i)
+        CASE_READ_RETURN(LIS3DH_REG_ACCEL_WHO_AM_I, who_am_i)
         CASE_READ_RETURN(LIS3DH_REG_CTRL_REG0, ctrl_reg0)
         CASE_READ_RETURN(LIS3DH_REG_TEMP_CFG_REG, temp_cfg_reg)
         CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG1, ctrl_reg1)
@@ -405,7 +405,7 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
             /* Master is starting a READ operation 
             (requesting data from the device) */
 			if (lis3dh->ptr == 0xFF)
-				lis3dh->ptr = LIS3DHTR_REG_ACCEL_WHO_AM_I;
+				lis3dh->ptr = LIS3DH_REG_ACCEL_WHO_AM_I;
 			lis3dh->address_phase = false;
             break;
             
