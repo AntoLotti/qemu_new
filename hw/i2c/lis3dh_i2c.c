@@ -211,6 +211,7 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
 
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 {
+    printf("QEMU LIS3DH realize\n");
     LIS3DHState *lis3dh = LIS3DH_I2C(dev);
     
     /* Initialize I2C state */
@@ -232,8 +233,8 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
     __lis3dh_i2c_reset(lis3dh);
         
     /* Enable hotplug */
-    DeviceClass *dc = DEVICE_GET_CLASS(dev);
-    dc->hotpluggable = true;
+    /*DeviceClass *dc = DEVICE_GET_CLASS(dev);
+    dc->hotpluggable = true;*/
 }
 
 static void lis3dh_i2c_unrealize(DeviceState *dev)
@@ -429,6 +430,8 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
     LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
 
+    printf("\n\n LIS3DH received: 0x%02x\n", data);
+
 	if (lis3dh->ptr == 0xFF && lis3dh->address_phase)
 	{
 		lis3dh->ptr = data & LIS3DH_SUB_REG_MASK;
@@ -446,22 +449,26 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 {
     LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
-	return __read_register( lis3dh );
+    uint8_t value = __read_register( lis3dh );
+    printf("LIS3DH sending: 0x%02x\n", value);
+	return value;
 }
 
 /**************************************************************************
     LIS3DH REGISTRATION IN QEMU 
 **************************************************************************/
 /* LIS3DH class initialization */
-static void lis3dh_i2c_class_init( ObjectClass *kclass, const void *data )
+static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
 {
+    printf("\n Qemu LIS3DH class init \n");
     DeviceClass *dc     = DEVICE_CLASS(kclass);     // The generic device class operations
     I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);  // The I2C-specific interface implementation
     
     /* Device lifecycle */
-    dc->realize     = lis3dh_i2c_realize;           // Called when device created
-    dc->unrealize   = lis3dh_i2c_unrealize;         // Clean up
-    dc->desc        = "I2C accelerometer: LIS3DH"; 
+    dc->realize         = lis3dh_i2c_realize;           // Called when device created
+    dc->unrealize       = lis3dh_i2c_unrealize;         // Clean up
+    dc->hotpluggable    = false;
+    dc->desc            = "I2C accelerometer: LIS3DH"; 
     
     /* I2C protocol implementation */
     k->event    = lis3dh_i2c_event;                 // Bus events: START/STOP/NACK

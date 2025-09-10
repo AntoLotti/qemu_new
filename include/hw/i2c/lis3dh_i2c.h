@@ -24,6 +24,9 @@
  * THE SOFTWARE.
  */
 
+#ifndef INC_LIS3DH_I2C_H_
+#define INC_LIS3DH_I2C_H_
+
 #include "hw/sysbus.h"
 #include "hw/i2c/i2c.h"
 #include "qemu/timer.h"
@@ -220,3 +223,5 @@ typedef struct LIS3DHState
     uint8_t act_ths;            //
     uint8_t act_dur;            //
 } LIS3DHState;
+
+#endif
