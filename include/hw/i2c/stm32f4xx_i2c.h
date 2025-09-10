@@ -26,6 +26,7 @@
 #define HW_STM32F4XX_I2C_H
 
 #include <stdint.h>
+#include "qapi/error.h"
 #include "hw/sysbus.h"
 #include "hw/i2c/i2c.h"
 #include "qemu/timer.h"
@@ -76,7 +77,10 @@ typedef struct STM32F4XXI2CState{
     /* <public> */
     MemoryRegion iomem;
     I2CBus *bus;
-    qemu_irq irq;
+    qemu_irq irq_event;
+    qemu_irq irq_error;
+
+    char *bus_name;
 
     uint32_t i2c_cr1; 
     uint32_t i2c_cr2; 
@@ -90,5 +94,7 @@ typedef struct STM32F4XXI2CState{
     uint32_t i2c_fltr; 
 
 }STM32F4XXI2CState;
+
+QEMU_BUILD_BUG_ON(sizeof(STM32F4XXI2CState) < 256);  // Minimum expected size
 
 #endif /* HW_STM32F4XX_I2C_H */

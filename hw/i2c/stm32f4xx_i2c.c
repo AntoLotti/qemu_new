@@ -27,6 +27,7 @@
 #include "qemu/osdep.h"
 #include "qemu/log.h"
 #include "qemu/module.h"
+#include "hw/qdev-properties.h"
 #include "hw/irq.h"
 #include "hw/i2c/stm32f4xx_i2c.h"
 #include "migration/vmstate.h"
@@ -38,19 +39,19 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
 {
     STM32F4XXI2CState *s = opaque;
     uint32_t readval = 0x00U;
-
-    STM32F4XXI2CState *s = opaque;
     
+    printf("\n I2C READ: addr=0x%02lx\n", addr);
+
     switch (addr) {
-    case STM_I2C_REG_CR1:       return (uint64_t)s->cr1;
-    case STM_I2C_REG_CR2:       return (uint64_t)s->cr2;
-    case STM_I2C_REG_OAR1:      return (uint64_t)s->oar1;
-    case STM_I2C_REG_OAR2:      return (uint64_t)s->oar2;
-    case STM_I2C_REG_DR:        return (uint64_t)s->dr;
-    case STM_I2C_REG_SR1:       return (uint64_t)s->sr1;
-    case STM_I2C_REG_SR2:       return (uint64_t)s->sr2;
-    case STM_I2C_REG_CCR:       return (uint64_t)s->ccr;
-    case STM_I2C_REG_TRISE:     return (uint64_t)s->trise;
+    case STM_I2C_REG_CR1:       return (uint64_t)s->i2c_cr1;
+    case STM_I2C_REG_CR2:       return (uint64_t)s->i2c_cr2;
+    case STM_I2C_REG_OAR1:      return (uint64_t)s->i2c_oar1;
+    case STM_I2C_REG_OAR2:      return (uint64_t)s->i2c_oar2;
+    case STM_I2C_REG_DR:        return (uint64_t)s->i2c_dr;
+    case STM_I2C_REG_SR1:       return (uint64_t)s->i2c_sr1;
+    case STM_I2C_REG_SR2:       return (uint64_t)s->i2c_sr2;
+    case STM_I2C_REG_CCR:       return (uint64_t)s->i2c_ccr;
+    case STM_I2C_REG_TRISE:     return (uint64_t)s->i2c_trise;
     default:
         qemu_log_mask(LOG_GUEST_ERROR, "stm32f4xx_i2c: read at 0x%" HWADDR_PRIx "\n", addr);
         return 0x00UL;
@@ -63,17 +64,19 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 {
     STM32F4XXI2CState *s = opaque;
     
+    printf("I2C WRITE: addr=0x%02lx, value=0x%02lx\n", addr, value);
+
     switch (addr) 
     {
-        case I2C_CR1:   s->cr1  = value;    break;
-        case I2C_CR2:   s->cr2  = value;    break;
-        case I2C_OAR1:  s->oar1 = value;    break;
-        case I2C_OAR2:  s->oar2 = value;    break;
-        case I2C_DR:    s->dr   = value;    break;
-        case I2C_SR1:   /* Read-only */     break;
-        case I2C_SR2:   /* Read-only */     break;
-        case I2C_CCR:   s->ccr  = value;    break;
-        case I2C_TRISE: s->trise = value;   break;
+        case STM_I2C_REG_CR1:   s->i2c_cr1  = value;    break;
+        case STM_I2C_REG_CR2:   s->i2c_cr2  = value;    break;
+        case STM_I2C_REG_OAR1:  s->i2c_oar1 = value;    break;
+        case STM_I2C_REG_OAR2:  s->i2c_oar2 = value;    break;
+        case STM_I2C_REG_DR:    s->i2c_dr   = value;    break;
+        case STM_I2C_REG_SR1:   /* Read-only */     break;
+        case STM_I2C_REG_SR2:   /* Read-only */     break;
+        case STM_I2C_REG_CCR:   s->i2c_ccr  = value;    break;
+        case STM_I2C_REG_TRISE: s->i2c_trise = value;   break;
         default:
             qemu_log_mask(LOG_GUEST_ERROR, "stm32f4xx_i2c: write at 0x%" HWADDR_PRIx "\n", addr);
             break;
@@ -83,6 +86,11 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 /**************************************************************************
     DEVICE LIFE FUNCTIONS
 **************************************************************************/
+static Property stm32f4xx_i2c_properties[] = 
+{
+    DEFINE_PROP_STRING("bus-name", STM32F4XXI2CState, bus_name),
+};
+
 static void stm32f4xx_i2c_reset(DeviceState *dev)
 {
     STM32F4XXI2CState *stm32f4xx = STM32F4XX_I2C(dev);
@@ -124,40 +132,59 @@ static const MemoryRegionOps stm32f4xx_i2c_ops =
     .write  = stm32f4xx_i2c_write,
     .endianness = DEVICE_NATIVE_ENDIAN,
 };
-/**************************************************************************
-    LIS3DH REGISTRATION IN QEMU 
-**************************************************************************/
-static void stm32f4xx_i2c_init(Object *obj)
-{
-    STM32F4XXI2CState *stm32 = STM32F4XX_I2C(obj);
-    SysBusDevice    *sbd    = SYS_BUS_DEVICE(obj);
-    DeviceState     *dev    = DEVICE(obj);
 
-    /* Initialize memory region */
+static void stm32f4xx_i2c_realize(DeviceState *dev, Error **errp)
+{
+    printf("\n\n Realizing STM32F4XX I2C controller\n");
+
+    STM32F4XXI2CState   *stm32  = STM32F4XX_I2C(dev);
+    SysBusDevice        *sbd    = SYS_BUS_DEVICE(dev);
+
+    if (!stm32->bus_name) 
+    {
+        stm32->bus_name = g_strdup("i2c");
+    }
+
+    printf("\n stm32->bus_name = %s \n", stm32->bus_name );
+    stm32->bus = i2c_init_bus(dev, stm32->bus_name);
+    
     memory_region_init_io
     (
-        &stm32->mmio, obj, 
+        &stm32->iomem, OBJECT(dev), 
         &stm32f4xx_i2c_ops, stm32,
         TYPE_STM32F4XX_I2C, 0x400
     );
-    sysbus_init_mmio(sbd, &stm32->mmio);
+
+    sysbus_init_mmio(sbd, &stm32->iomem);
     
     /* Initialize interrupt lines */
-    sysbus_init_irq(sbd, &stm32->irq);
-    //sysbus_init_irq(sbd, &s->irq_event);   // Event interrupt
-    //sysbus_init_irq(sbd, &s->irq_error);    // Error interrupt
-    
-    /* Create I2C bus */
-    s->bus = i2c_init_bus(dev, "i2c");
+    sysbus_init_irq(sbd, &stm32->irq_event);
+    sysbus_init_irq(sbd, &stm32->irq_error);
+
+
+    printf("I2C bus created: %p\n", stm32->bus);
+    //printf("I2C bus name: %s\n", stm32->bus->name);
+
+    if (!stm32->bus) {
+        error_setg(errp, "stm32f4xx_i2c: I2C bus not initialized");
+        return;
+    }
+
+    printf("STM32F4XX I2C realized successfully\n");
 }
 
+
+/**************************************************************************
+    LIS3DH REGISTRATION IN QEMU 
+**************************************************************************/
 static void stm32f4xx_i2c_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
+    device_class_set_props(dc, stm32f4xx_i2c_properties);
     device_class_set_legacy_reset(dc, stm32f4xx_i2c_reset);
-    dc->vmsd    = &vmstate_stm32f4xx_i2c;
-    //dc->realize = stm32f4xx_i2c_realize;
+    dc->realize = stm32f4xx_i2c_realize;
+    dc->vmsd    = &vmstate_stm32f2xx_i2c;
 }
 
 static const TypeInfo stm32f4xx_i2c_info = 
@@ -165,13 +192,13 @@ static const TypeInfo stm32f4xx_i2c_info =
     .name           = TYPE_STM32F4XX_I2C,
     .parent         = TYPE_SYS_BUS_DEVICE,
     .instance_size  = sizeof(STM32F4XXI2CState),
-    .instance_init  = stm32f4xx_i2c_init,
+    // .instance_init  = stm32f4xx_i2c_init,
     .class_init     = stm32f4xx_i2c_class_init,
 };
 
 static void stm32f4xx_i2c_register_types(void)
 {
-    type_register_static(&stm32f4xx_i2c);
+    type_register_static(&stm32f4xx_i2c_info);
 }
 
 type_init(stm32f4xx_i2c_register_types)
