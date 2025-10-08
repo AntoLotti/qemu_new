@@ -64,6 +64,7 @@
     REGISTERS BIT
 **************************************************************************/
 #define  STM_I2C_SWRST_BIT          (uint32_t)BIT(15)
+#define  STM32F4xx_I2C_CR1_RE2      (uint32_t)BIT(14)
 #define  STM_I2C_ALERT_BIT          (uint32_t)BIT(13)
 #define  STM_I2C_PEC_BIT            (uint32_t)BIT(12)
 #define  STM_I2C_POS_BIT            (uint32_t)BIT(11)
@@ -75,6 +76,7 @@
 #define  STM_I2C_ENPEC_BIT          (uint32_t)BIT(5)
 #define  STM_I2C_ENARP_BIT          (uint32_t)BIT(4)
 #define  STM_I2C_SMBTYPE_BIT        (uint32_t)BIT(3)
+#define  STM32F4xx_I2C_CR1_RE1      (uint32_t)BIT(2)
 #define  STM_I2C_SMBUS_BIT          (uint32_t)BIT(1)
 #define  STM_I2C_PE_BIT             (uint32_t)BIT(0)
 
@@ -97,6 +99,7 @@
 
 #define STM_I2C_SMBALERT_BIT        (uint32_t)BIT(15) 
 #define STM_I2C_TIMEOUT_BIT         (uint32_t)BIT(14)
+#define STM32F4xx_I2C_SR1_RE2       (uint32_t)BIT(13)
 #define STM_I2C_PECERR_BIT          (uint32_t)BIT(12)
 #define STM_I2C_OVR_BIT             (uint32_t)BIT(11)
 #define STM_I2C_AF_BIT              (uint32_t)BIT(10)
@@ -104,6 +107,7 @@
 #define STM_I2C_BERR_BIT            (uint32_t)BIT(8)
 #define STM_I2C_TXE_BIT             (uint32_t)BIT(7)
 #define STM_I2C_RXNE_BIT            (uint32_t)BIT(6)
+#define STM32F4xx_I2C_SR1_RES1      (uint32_t)BIT(5)
 #define STM_I2C_STOPF_BIT           (uint32_t)BIT(4)
 #define STM_I2C_ADD10_BIT           (uint32_t)BIT(3)
 #define STM_I2C_BTF_BIT             (uint32_t)BIT(2)
@@ -138,7 +142,7 @@ OBJECT_DECLARE_SIMPLE_TYPE(STM32F4XXI2CState, STM32F4XX_I2C)
 /* I2C state machine */
 typedef enum stm32f4xx_i2c_states_e
 {
-    STM32F4xx_I2C_STATE_DISABLE,
+    STM32F4xx_I2C_STATE_DISABLED,
     STM32F4xx_I2C_STATE_IDLE,
     STM32F4xx_I2C_STATE_START_SENT,           // START sent, waiting for address
     STM32F4xx_I2C_STATE_ADDR_SENT_READ,       // Address sent (read mode), waiting for ADDR clear
@@ -161,7 +165,6 @@ typedef struct STM32F4XXI2CState{
     char *bus_name;
     stm32f4xx_i2c_states_t state;
     uint8_t slv_address;
-    bool flg1;
 
     uint32_t i2c_cr1; 
     uint32_t i2c_cr2; 
