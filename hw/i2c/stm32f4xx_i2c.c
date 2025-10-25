@@ -32,6 +32,13 @@
 #include "hw/i2c/stm32f4xx_i2c.h"
 #include "migration/vmstate.h"
 
+
+/**
+ * TODO: 
+ * - In The address phase, set the ADDR bit when reciving a ACK 
+ * -
+ */
+
 static bool flg_sb      = false;
 static bool flg_addr    = false;
 static bool flg_stop    = false;
@@ -56,7 +63,21 @@ static bool __stm32f4xx_i2c_re_start_condition(STM32F4XXI2CState* src)
     );
 }
 
-static bool __stm32f4xx_i2c_stop_condition(STM32F4XXI2CState* src)
+static bool __stm32f4xx_i2c_transmitter_stop_condition(STM32F4XXI2CState* src)
+{
+    printf("\nflg_stop = %s", flg_stop ? "TRUE" : "FALSE");
+    printf("\nsrc->i2c_cr1 & STM_I2C_ACK_BIT = 0x%x", (src->i2c_cr1 & STM_I2C_ACK_BIT));
+
+    return
+    ( 
+        ( (src->state == STM32F4xx_I2C_STATE_ADDR_SENT_WRITE)
+            || (src->state == STM32F4xx_I2C_STATE_TRANSMITTING) )
+        && ( (src->i2c_cr1 & STM_I2C_ACK_BIT) == 0 )
+        && flg_stop
+    );
+}
+
+static bool __stm32f4xx_i2c_receiver_stop_condition(STM32F4XXI2CState* src)
 {
     printf("\nflg_stop = %s", flg_stop ? "TRUE" : "FALSE");
     printf("\nsrc->i2c_cr1 & STM_I2C_ACK_BIT = 0x%x", (src->i2c_cr1 & STM_I2C_ACK_BIT));
@@ -97,11 +118,11 @@ static bool __stm32f4xx_i2c_reciving_condition(STM32F4XXI2CState* src)
 }
 
 
-static void stm32f4xx_i2c_begin_transfer(STM32F4XXI2CState* src, uint64_t value)
+static void stm32f4xx_i2c_begin_transfer(STM32F4XXI2CState* src)
 {
-
-    uint8_t address = (uint8_t)(extract32(value, 1, 7));
-    uint8_t mode    = (uint8_t)(extract32(value, 0, 1));
+   
+    uint8_t address = (uint8_t)(extract32(src->i2c_dr, 1, 7));
+    uint8_t mode    = (uint8_t)(extract32(src->i2c_dr, 0, 1));
 
     printf("\n STM address: 0x%x \n", address);
  
@@ -120,17 +141,20 @@ static void stm32f4xx_i2c_begin_transfer(STM32F4XXI2CState* src, uint64_t value)
         ( (mode == 0) ? (src->i2c_sr2 & ~STM_I2C_TRA_BIT) : (src->i2c_sr2 | STM_I2C_TRA_BIT) );
 
         src->i2c_sr1 |= STM_I2C_ADDR_BIT;
+        src->i2c_dr   = 0U;
 
         if ( mode == 0 )
         {
             printf("\n STM32F4xx_I2C_STATE_ADDR_SENT_WRITE \n");
             src->i2c_sr1 |= STM_I2C_TXE_BIT;
+            src->i2c_sr1 |= STM_I2C_BTF_BIT;
             src->state = STM32F4xx_I2C_STATE_ADDR_SENT_WRITE;
         }
         else
         {
             printf("\n STM32F4xx_I2C_STATE_ADDR_SENT_READ \n");        
             src->i2c_sr1 |= STM_I2C_RXNE_BIT;
+            src->i2c_sr1 |= STM_I2C_BTF_BIT;
             src->state = STM32F4xx_I2C_STATE_ADDR_SENT_READ;
         }
 
@@ -144,21 +168,25 @@ static void stm32f4xx_i2c_stop_generation(STM32F4XXI2CState* src)
     src->i2c_sr2 &= ~STM_I2C_MSL_BIT;       // Clear the MSL bit in SR2
     src->i2c_sr2 &= ~STM_I2C_BUSY_BIT;      // Bus no longer busy
     src->i2c_sr1 &= ~STM_I2C_TXE_BIT;
+    src->i2c_sr1 &= ~STM_I2C_BTF_BIT;
 
     flg_stop = false;
     flg_addr = false;
     flg_sb = false;
 }
 
-static void stm32f4xx_i2c_data_transfer(STM32F4XXI2CState *src, uint64_t value)
+static void stm32f4xx_i2c_data_transfer(STM32F4XXI2CState *src)
 {
-    if ( i2c_send(src->bus, value) )
+    if ( i2c_send(src->bus, src->i2c_dr) )
     {
         printf("\n Error during i2c_send \n");
-    }else
+    }
+    else
     {
         printf("\n All ok during i2c_send \n");
         src->i2c_sr1 |= STM_I2C_TXE_BIT;
+        src->i2c_sr1 |= STM_I2C_BTF_BIT;
+        src->i2c_dr   = 0U;
         src->state = STM32F4xx_I2C_STATE_TRANSMITTING;
     }
     
@@ -170,7 +198,7 @@ static void stm32f4xx_i2c_data_recive(STM32F4XXI2CState *src)
     
     printf("\n Data received: 0x%x \n", ret);
     
-    if ( __stm32f4xx_i2c_stop_condition(src) )
+    if ( __stm32f4xx_i2c_receiver_stop_condition(src) )
     {
         printf("\n STM32 Stop Condition \n");
 
@@ -179,6 +207,8 @@ static void stm32f4xx_i2c_data_recive(STM32F4XXI2CState *src)
         stm32f4xx_i2c_stop_generation(src);
     }else
     {
+        src->i2c_sr1 |= STM_I2C_RXNE_BIT;
+        src->i2c_sr1 |= STM_I2C_BTF_BIT;
         src->state = STM32F4xx_I2C_STATE_RECEIVING;
     }
     
@@ -283,7 +313,10 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
         
         case STM_I2C_REG_DR:
 
-            // Handling RXNE Cleaning
+            // Handling BTF Bit Cleaning
+            s->i2c_sr1 &= ~STM_I2C_BTF_BIT;
+
+            // Handling RXNE Bit Cleaning
             s->i2c_sr1 &= ~STM_I2C_RXNE_BIT;
 
             // Handling Data Reception
@@ -303,7 +336,7 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
             
             break;
         
-        case STM_I2C_REG_SR2:   
+        case STM_I2C_REG_SR2:
             
             // Handling ADDR Bit Clearing 
             if ( flg_addr )
@@ -333,6 +366,7 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 {
     /**
      * TODO: Implement slave mode
+     * TODO: Implement write more thet one byte
      * TODO: Hardware automatically sends ACK (if ACK=1).
      * TODO: Handle the clearing of TRA bit
      */
@@ -417,6 +451,7 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
                     s->i2c_sr2 |= STM_I2C_BUSY_BIT;     // Bus busy
 
                     s->i2c_sr1 &= ~STM_I2C_TXE_BIT;     // clear TXE Bit
+                    s->i2c_sr1 &= ~STM_I2C_BTF_BIT;
                     
                     s->state = STM32F4xx_I2C_STATE_START_SENT;
 
@@ -434,7 +469,9 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
                     s->i2c_sr2 |= STM_I2C_MSL_BIT;      // Master mode
                     s->i2c_sr2 |= STM_I2C_BUSY_BIT;     // Bus busy
 
+                    
                     s->i2c_sr1 &= ~STM_I2C_TXE_BIT;     // clear TXE Bit
+                    s->i2c_sr1 &= ~STM_I2C_BTF_BIT;
 
                     s->state = STM32F4xx_I2C_STATE_START_SENT;
                     
@@ -469,18 +506,19 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
                 printf("Stop condition requested\n");
                 flg_stop = true;
 
-                // Generate a STOP condition
-            //    if ( __stm32f4xx_i2c_stop_condition(s) ) 
-            //    {
-            //        printf("Stop condition requested\n");
-            //        
-            //        flg_stop = true;
-            //
-            //        /**
-            //         * TODO: handle/generate interrupt
-            //         */
-            //        
-            //    } else 
+                // Generate a transmision STOP condition
+                if ( __stm32f4xx_i2c_transmitter_stop_condition(s) ) 
+                {
+                    printf("Stop condition requested\n");
+                    
+                    stm32f4xx_i2c_stop_generation(s);
+
+                    /**
+                     * TODO: handle/generate interrupt
+                     */
+                    
+                } 
+            //    else 
             //    {
             //        /**
             //         * TODO: set an error flag
@@ -544,10 +582,15 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 
         case STM_I2C_REG_DR:
 
-            // Handling TXE Cleaning
+            s->i2c_dr = (uint32_t)value;
+
+            // Handling BTF Bit Cleaning
+            s->i2c_sr1 &= ~STM_I2C_BTF_BIT;
+
+            // Handling TXE Bit Cleaning
             s->i2c_sr1 &= ~STM_I2C_TXE_BIT;
             
-            // Handling RXNE Cleaning
+            // Handling RXNE Bit Cleaning
             s->i2c_sr1 &= ~STM_I2C_RXNE_BIT;
 
             // Handling SB Bit Clearing 
@@ -559,14 +602,14 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 
             // Handeling Data Sending To Slave
             if ( __stm32f4xx_i2c_transmitting_condition(s) )
-                stm32f4xx_i2c_data_transfer(s, value);
-            
+                stm32f4xx_i2c_data_transfer(s);
+//                stm32f4xx_i2c_data_transfer(s, value);
+
             // Handeling Address Sending To Slave
             if ( __stm32f4xx_i2c_address_condition(s) )
-                stm32f4xx_i2c_begin_transfer(s, value);
-            
-            s->i2c_dr = (uint32_t)value;
-                        
+                stm32f4xx_i2c_begin_transfer(s);
+//                stm32f4xx_i2c_begin_transfer(s, value);
+
             break;
 
         case STM_I2C_REG_SR1:
