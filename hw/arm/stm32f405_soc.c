@@ -256,13 +256,11 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
     }
 
     /* I2C devices */
-    printf("\n Start of the I2C device configuration \n");
     for (i = 0; i < STM_NUM_I2CS; i++) 
     {
         dev = DEVICE(&s->i2c[i]);
 
         char *bus_name = g_strdup_printf("i2c%d", i+1);
-        printf("Setting I2C controller %d bus name to: %s\n", i, bus_name);
         qdev_prop_set_string(dev, "bus-name", bus_name );
 
         if (!sysbus_realize(SYS_BUS_DEVICE(&s->i2c[i]), errp))
@@ -277,23 +275,20 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
         sysbus_connect_irq(busdev, 1,
                            qdev_get_gpio_in(armv7m, i2c_irq[i*2+1]));
 
-        // Store the bus pointers for easy access
-        if (i == 0) s->i2c1_bus = s->i2c[i].bus;
-        if (i == 1) s->i2c2_bus = s->i2c[i].bus;
-        if (i == 2) s->i2c3_bus = s->i2c[i].bus;             
+        // Store the bus pointers to expose them for the hot plug
+        //if (i == 0) s->i2c1_bus = s->i2c[i].bus;
+        //if (i == 1) s->i2c2_bus = s->i2c[i].bus;
+        //if (i == 2) s->i2c3_bus = s->i2c[i].bus;             
     }
 
     /* LIS3DH to I2C1 */
-    printf("\n\n Creating LIS3DH accelerometer...\n");
-    lis3dh = qdev_new(TYPE_LIS3DH_I2C);
-    printf("LIS3DH accelerometer created %p...\n", lis3dh);
+    lis3dh = qdev_new(TYPE_LIS3DH_I2C);                                             // Creating LIS3DH accelerometer
+    i2c_slave_set_address(I2C_SLAVE(lis3dh), 0x18);                                 //Setting I2C address to 0x18    
+    i2c_slave_realize_and_unref(I2C_SLAVE(lis3dh), s->i2c[0].bus, &error_fatal);    // Connecting to I2C1 bus
 
-    printf("Setting I2C address to 0x19...\n");
-    i2c_slave_set_address(I2C_SLAVE(lis3dh), 0x18<<1);
-    
-    printf("Connecting to I2C1 bus: %p\n", s->i2c[0].bus);
-    i2c_slave_realize_and_unref(I2C_SLAVE(lis3dh), s->i2c[0].bus, &error_fatal);
-    printf("LIS3DH connected to I2C1 successfully\n");
+    /**
+     * TODO: Error handling if LIS3DH doesn't connect
+     */
 
     /* EXTI device */
     dev = DEVICE(&s->exti);
