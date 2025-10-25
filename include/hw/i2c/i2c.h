@@ -141,16 +141,132 @@ int i2c_start_send(I2CBus *bus, uint8_t address);
  */
 int i2c_start_send_async(I2CBus *bus, uint8_t address);
 
+/**
+ * @brief Schedule pending master operations on the I2C bus
+ * 
+ * @param bus The I2C bus to schedule operations on
+ * 
+ * This function triggers the bottom half (BH) mechanism to process
+ * pending I2C master operations that were queued asynchronously.
+ * It's typically called when the bus becomes available after being
+ * busy or when asynchronous operations complete.
+ */
 void i2c_schedule_pending_master(I2CBus *bus);
 
+/**
+ * @brief End the current I2C transfer and release the bus
+ * 
+ * @param bus The I2C bus to end the transfer on
+ * 
+ * This function terminates the current I2C transaction, clears
+ * the bus state, and releases control of the bus. It should be
+ * called after a complete transfer (following a STOP condition)
+ * or when aborting a transfer due to errors.
+ */
 void i2c_end_transfer(I2CBus *bus);
+
+/**
+ * @brief Send a NACK (Not Acknowledged) response on the I2C bus
+ * 
+ * @param bus The I2C bus to send NACK on
+ * 
+ * This function signals that the receiver does not acknowledge
+ * the received data. In master mode, it indicates the master
+ * wants to stop receiving. In slave mode, it can indicate
+ * the slave is busy or cannot accept data.
+ */
 void i2c_nack(I2CBus *bus);
+
+/**
+ * @brief Send an ACK (Acknowledged) response on the I2C bus
+ * 
+ * @param bus The I2C bus to send ACK on
+ * 
+ * This function signals successful reception of data. Each byte
+ * in an I2C transfer must be acknowledged by the receiver with
+ * an ACK, except for the final byte in a read operation which
+ * typically gets a NACK.
+ */
 void i2c_ack(I2CBus *bus);
+
+/**
+ * @brief Execute pending master operations on the I2C bus
+ * 
+ * @param bus The I2C bus to process
+ * @param bh The bottom half context (QEMU asynchronous execution mechanism)
+ * 
+ * This function is the bottom half handler that processes queued
+ * I2C master operations. It's called asynchronously by QEMU's
+ * BH mechanism to handle I2C transfers without blocking the main
+ * execution thread.
+ */
 void i2c_bus_master(I2CBus *bus, QEMUBH *bh);
+
+/**
+ * @brief Release the I2C bus after master operations complete
+ * 
+ * @param bus The I2C bus to release
+ * 
+ * This function cleans up bus state after master operations
+ * complete, making the bus available for other masters or
+ * operations. It resets internal state and clears any pending
+ * operations.
+ */
 void i2c_bus_release(I2CBus *bus);
+
+/**
+ * @brief Send data on the I2C bus (synchronous)
+ * 
+ * @param bus The I2C bus to send data on
+ * @param data The byte to send
+ * @return int 0 on success (ACK received), non-zero on failure (NACK received)
+ * 
+ * This function synchronously sends a single byte over the I2C bus
+ * and waits for acknowledgment. It blocks until the transfer completes
+ * or fails. Used for standard I2C write operations.
+ */
 int i2c_send(I2CBus *bus, uint8_t data);
+
+/**
+ * @brief Send data on the I2C bus (asynchronous)
+ * 
+ * @param bus The I2C bus to send data on
+ * @param data The byte to send
+ * @return int 0 if data queued successfully, non-zero on error
+ * 
+ * This function queues data for asynchronous transmission on the I2C bus.
+ * The actual transfer happens later via the bottom half mechanism.
+ * Used for non-blocking I2C operations where immediate completion
+ * isn't required.
+ */
 int i2c_send_async(I2CBus *bus, uint8_t data);
+
+/**
+ * @brief Receive data from the I2C bus
+ * 
+ * @param bus The I2C bus to receive data from
+ * @return uint8_t The received byte
+ * 
+ * This function reads a single byte from the I2C bus. The function
+ * handles the entire receive process including clock stretching
+ * if necessary. Typically used during I2C read operations.
+ */
 uint8_t i2c_recv(I2CBus *bus);
+
+/**
+ * @brief Scan the I2C bus for devices responding to an address
+ * 
+ * @param bus The I2C bus to scan
+ * @param address The 7-bit I2C address to check (without R/W bit)
+ * @param broadcast Whether to include broadcast address (0x00) in scan
+ * @param current_devs List of currently known devices on the bus
+ * @return bool true if a device responded to the address, false otherwise
+ * 
+ * This function performs an I2C bus scan to detect if any device
+ * acknowledges the specified address. Used for device discovery
+ * and bus enumeration. The broadcast parameter controls whether
+ * the general call address (0x00) should be considered.
+ */
 bool i2c_scan_bus(I2CBus *bus, uint8_t address, bool broadcast,
                   I2CNodeList *current_devs);
 
