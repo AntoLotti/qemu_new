@@ -20,121 +20,82 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh);
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp);
 static void lis3dh_i2c_unrealize(DeviceState *dev);
 
-static int16_t __round_and_transform(float src);
-static void __acc_x_axis_data_generation(uint8_t out_x_h, uint8_t out_x_l);
-static void __acc_y_axis_data_generation(uint8_t out_y_h, uint8_t out_y_l);
-static void __acc_z_axis_data_generation(uint8_t out_z_h, uint8_t out_z_l);
+static int16_t __float_to_int16(float src);
+static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_axis_l );
+static void __acc_x_axis_data_generation(uint8_t* out_x_h, uint8_t* out_x_l);
+static void __acc_y_axis_data_generation(uint8_t* out_y_h, uint8_t* out_y_l);
+static void __acc_z_axis_data_generation(uint8_t* out_z_h, uint8_t* out_z_l);
 
 /**************************************************************************
     ACCELEROMETER DATA GENERATION
 **************************************************************************/
-static int16_t __round_and_transform(float src)
+static int16_t __float_to_int16(float src)
 {
-    float decimal = fabsf(src - (int)src);
+    bool is_pos = true;
 
-    if (decimal >= 0.5f)
-    {
-        return (int16_t)(src) + src <= 0 ? -1 : 1 ;   
-    }    
+    if ( src < 0 )
+        is_pos = false;
 
-    return (int16_t)src;
+    int16_t dst = 0x00;
+
+    if ( fabsf(src - (int)src) >= 0.5f )
+        dst = (int16_t)src + (is_pos ? 1 : -1); 
+    else
+        dst = (int16_t)src;
+
+    return dst;
 }
 
-static void __acc_x_axis_data_generation(uint8_t out_x_h, uint8_t out_x_l)
+static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_axis_l )
 {
-    // Data Generation In m/s² //
-    float x_axis_data = -10.7;
+    /**
+    *   TODO: develop each lis3dh mode
+    *   - NOW only high resolution mode with a FS of +- 2g
+    */
+
+    float data_with_So = src / ( 0.001f );   // -1,023(g) / 0.001(g/LSB) = -1023 LSB 
 
     /**
-     * TODO
-     * Ensure that the raw data fit into
-     * a int16_t with out overflow
-     * 
-     * limit the range to ensure it 
+     * TODO: check the max value of each modes
      */
 
-    // Transform In Raw Data //
-    float temp = x_axis_data / ( 0.001f * LIS3DH_ACCELERATION_CONST);   // -1090.7
-    int16_t x_raw_data = __round_and_transform(temp);   // -1091 = 1111 1011 1011 1101
-
+    int16_t data_in_16b = __float_to_int16( data_with_So ); // data_in_16b = 1111 1100 0000 0001
+    
     /**
-     * TODO
-     * 
-     * 1. Round The x_raw_data Up If Decimal Part Equal Or Bigger 
-     * That 0.5
-     * 
-     * 2. add the calculations with the others modes
-     * Now only avilable the high-resolution mode
-     */
-
+    * TODO: change the shift depending of the mode
+    * - now High resolution mode (12 bits) --> 4 bits shift
+    */
+    
+    int16_t x_raw_data = data_in_16b << 4; // 1111 1100 0000 0001 --> 1100 0000 0001 0000
+    printf("\n\n x_raw_data: 0x%x \n\n", x_raw_data);
+    
     // Split Data Into Registers //
-    out_x_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 );  // 1111 1011
-    out_x_l = (uint8_t)(x_raw_data & 0x00FF);           // 1011 1101
+    *out_axis_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
+    printf("\n\n out_x_h: 0x%x \n\n",*out_axis_h);
+    *out_axis_l = (uint8_t)(x_raw_data & 0x00FF);          // 0001 0000 = 0x10
+    printf("\n\n out_x_l: 0x%x \n\n",*out_axis_l);
 
 }
 
-static void __acc_y_axis_data_generation(uint8_t out_y_h, uint8_t out_y_l)
+static void __acc_x_axis_data_generation(uint8_t* out_x_h, uint8_t* out_x_l)
 {
-    // Data Generation In m/s² //
-    float x_axis_data = -10.7;
-
-    /**
-     * TODO
-     * Ensure that the raw data fit into
-     * a int16_t with out overflow
-     * 
-     * limit the range to ensure it 
-     */
-
-    // Transform In Raw Data //
-    float temp = x_axis_data / ( 0.001f * LIS3DH_ACCELERATION_CONST);   // -1090.7
-    int16_t x_raw_data = __round_and_transform(temp);   // -1091 = 1111 1011 1011 1101
-
-    /**
-     * TODO
-     * 
-     * 1. Round The x_raw_data Up If Decimal Part Equal Or Bigger 
-     * That 0.5
-     * 
-     * 2. add the calculations with the others modes
-     * Now only avilable the high-resolution mode
-     */
-
-    // Split Data Into Registers //
-    out_y_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 );  // 1111 1011
-    out_y_l = (uint8_t)(x_raw_data & 0x00FF);           // 1011 1101
+    // Data Generation In g //
+    float axis_data = -1.023f;      // -1,023g
+    __data_transformation( axis_data ,out_x_h, out_x_l );    
 }
 
-static void __acc_z_axis_data_generation(uint8_t out_z_h, uint8_t out_z_l)
+static void __acc_y_axis_data_generation(uint8_t* out_y_h, uint8_t* out_y_l)
 {
-    // Data Generation In m/s² //
-    float x_axis_data = -10.7;
+    // Data Generation In g //
+    float axis_data = -1.023f;      // -1,023g
+    __data_transformation( axis_data, out_y_h, out_y_l ); 
+}
 
-    /**
-     * TODO
-     * Ensure that the raw data fit into
-     * a int16_t with out overflow
-     * 
-     * limit the range to ensure it 
-     */
-
-    // Transform In Raw Data //
-    float temp = x_axis_data / ( 0.001f * LIS3DH_ACCELERATION_CONST);   // -1090.7
-    int16_t x_raw_data = __round_and_transform(temp);   // -1091 = 1111 1011 1011 1101
-
-    /**
-     * TODO
-     * 
-     * 1. Round The x_raw_data Up If Decimal Part Equal Or Bigger 
-     * That 0.5
-     * 
-     * 2. add the calculations with the others modes
-     * Now only avilable the high-resolution mode
-     */
-
-    // Split Data Into Registers //
-    out_z_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 );  // 1111 1011
-    out_z_l = (uint8_t)(x_raw_data & 0x00FF);           // 1011 1101
+static void __acc_z_axis_data_generation(uint8_t* out_z_h, uint8_t* out_z_l)
+{
+    // Data Generation In g //
+    float axis_data = -1.023f;      // -1,023g
+    __data_transformation( axis_data, out_z_h, out_z_l ); 
 }
 
 /**************************************************************************
@@ -142,22 +103,23 @@ static void __acc_z_axis_data_generation(uint8_t out_z_h, uint8_t out_z_l)
 **************************************************************************/
 static void __lis3dh_i2c_update_data(void *src)
 {
-    LIS3DHState *lis3dh = src;
-    
-    /* Generate new accelerometer values */
-    __acc_x_axis_data_generation( lis3dh->out_x_h, lis3dh->out_x_l );
-    __acc_y_axis_data_generation( lis3dh->out_y_h, lis3dh->out_y_l );
-    __acc_z_axis_data_generation( lis3dh->out_z_h, lis3dh->out_z_l );
-        
-    /* Set data ready flag */
-    //s->status_reg |= 0x08;  // Set DRDY bit
-    
-    /* Reschedule timer */
-    timer_mod
-    (
-        lis3dh->timer, 
-        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
-    );
+    (void)src;
+    //LIS3DHState *lis3dh = src;
+    //
+    ///* Generate new accelerometer values */
+    //__acc_x_axis_data_generation( lis3dh->out_x_h, lis3dh->out_x_l );
+    //__acc_y_axis_data_generation( lis3dh->out_y_h, lis3dh->out_y_l );
+    //__acc_z_axis_data_generation( lis3dh->out_z_h, lis3dh->out_z_l );
+    //    
+    ///* Set data ready flag */
+    ////s->status_reg |= 0x08;  // Set DRDY bit
+    //
+    ///* Reschedule timer */
+    //timer_mod
+    //(
+    //    lis3dh->timer, 
+    //    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
+    //);
 }
 
 static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
@@ -183,12 +145,18 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
     lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
     lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
     lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
-    lis3dh->out_x_l         = LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
-    lis3dh->out_x_h         = LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
-    lis3dh->out_y_l         = LIS3DH_OUT_Y_L_DEF;           // Y-Axis Acceleration Data Low Register
-    lis3dh->out_y_h         = LIS3DH_OUT_Y_H_DEF;           // Y-Axis Acceleration Data High Register
-    lis3dh->out_z_l         = LIS3DH_OUT_Z_L_DEF;           // Z-Axis Acceleration Data Low Register
-    lis3dh->out_z_h         = LIS3DH_OUT_Z_H_DEF;           // Z-Axis Acceleration Data High Register
+    
+    __acc_x_axis_data_generation( &lis3dh->out_x_h, &lis3dh->out_x_l);
+    __acc_y_axis_data_generation( &lis3dh->out_y_h, &lis3dh->out_y_l);
+    __acc_z_axis_data_generation( &lis3dh->out_z_h, &lis3dh->out_z_l);
+
+    lis3dh->out_x_l         = 0x10;//LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
+    lis3dh->out_x_h         = 0xc0;//LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
+    lis3dh->out_y_l         = 0x10;//LIS3DH_OUT_Y_L_DEF;           // Y-Axis Acceleration Data Low Register
+    lis3dh->out_y_h         = 0xc0;//LIS3DH_OUT_Y_H_DEF;           // Y-Axis Acceleration Data High Register
+    lis3dh->out_z_l         = 0x10;//LIS3DH_OUT_Z_L_DEF;           // Z-Axis Acceleration Data Low Register
+    lis3dh->out_z_h         = 0xc0;//LIS3DH_OUT_Z_H_DEF;           // Z-Axis Acceleration Data High Register
+    
     lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEF;     // FIFO Control Register
     lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEF;      // FIFO Source Register
     lis3dh->int1_cfg        = LIS3DH_INT1_CFG_DEF;          // Interrupt Configuration Register
@@ -333,50 +301,54 @@ static uint8_t __read_register( LIS3DHState *src )
     if (__reserved_address(src->ptr))
         return 0;
     
+    printf("\n\n LIS3DH read ptr: 0x%x", src->ptr);
+    
+    uint8_t ret = 0x00;
+
     switch (src->ptr)
     {             
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_STATUS_REG_AUX, status_reg_aux)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC1_L, adc_1_l)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC1_H, adc_1_h)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC2_L, adc_2_l)        
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC2_H, adc_2_h)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_L, adc_3_l)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_H, adc_3_h)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_WHO_AM_I, who_am_i)
-        CASE_READ_RETURN(LIS3DH_REG_CTRL_REG0, ctrl_reg0)
-        CASE_READ_RETURN(LIS3DH_REG_TEMP_CFG_REG, temp_cfg_reg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG1, ctrl_reg1)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG2, ctrl_reg2)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG3, ctrl_reg3)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG4, ctrl_reg4)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG5, ctrl_reg5)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CTRL_REG6, ctrl_reg6)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_REFERENCE, reference)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_STATUS_REG, status_reg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_X_L, out_x_l)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_X_H, out_x_h)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_Y_L, out_y_l)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_Y_H, out_y_h)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_Z_L, out_z_l)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_OUT_Z_H, out_z_h)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_FIFO_CTRL, fifo_ctrl_reg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_FIFO_SRC, fifo_src_reg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT1_CFG, int1_cfg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT1_SRC, int1_src)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT1_THS, int1_ths)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT1_DURATION, int1_duration)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT2_CFG, int2_cfg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT2_SRC, int2_src)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT2_THS, int2_ths)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_INT2_DURATION, int2_duration)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CLICK_CFG, click_cfg)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CLICK_SRC, click_src)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_CLICK_THS, click_ths)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_TIME_LIMIT, time_limit)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_TIME_LATENCY, time_latency)
-        CASE_READ_RETURN(LIS3DH_REG_ACCEL_TIME_WINDOW, time_window)
-        CASE_READ_RETURN(LIS3DH_ACT_THS, act_ths)
-        CASE_READ_RETURN(LIS3DH_ACT_DUR, act_dur)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_STATUS_REG_AUX, status_reg_aux)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC1_L, adc_1_l)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC1_H, adc_1_h)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC2_L, adc_2_l)        
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC2_H, adc_2_h)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC3_L, adc_3_l)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC3_H, adc_3_h)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_WHO_AM_I, who_am_i)
+        CASE_READ_RETURN(ret, LIS3DH_REG_CTRL_REG0, ctrl_reg0)
+        CASE_READ_RETURN(ret, LIS3DH_REG_TEMP_CFG_REG, temp_cfg_reg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG1, ctrl_reg1)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG2, ctrl_reg2)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG3, ctrl_reg3)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG4, ctrl_reg4)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG5, ctrl_reg5)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG6, ctrl_reg6)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_REFERENCE, reference)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_STATUS_REG, status_reg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_X_L, out_x_l)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_X_H, out_x_h)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Y_L, out_y_l)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Y_H, out_y_h)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Z_L, out_z_l)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Z_H, out_z_h)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_FIFO_CTRL, fifo_ctrl_reg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_FIFO_SRC, fifo_src_reg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_CFG, int1_cfg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_SRC, int1_src)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_THS, int1_ths)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_DURATION, int1_duration)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_CFG, int2_cfg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_SRC, int2_src)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_THS, int2_ths)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_DURATION, int2_duration)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CLICK_CFG, click_cfg)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CLICK_SRC, click_src)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CLICK_THS, click_ths)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_TIME_LIMIT, time_limit)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_TIME_LATENCY, time_latency)
+        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_TIME_WINDOW, time_window)
+        CASE_READ_RETURN(ret, LIS3DH_ACT_THS, act_ths)
+        CASE_READ_RETURN(ret, LIS3DH_ACT_DUR, act_dur)
 
         default:
             //#TODO print error message
@@ -384,7 +356,7 @@ static uint8_t __read_register( LIS3DHState *src )
             break;
     }
 
-    return 0x00;
+    return ret;
 }
 
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
@@ -396,15 +368,17 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
         case I2C_START_SEND:    // Start of write operation
             /* Master is starting a WRITE operation 
             (sending data to the device) */
+            printf("\n\n LIS3DH SEND");
             lis3dh->ptr             = 0xFF;
 			lis3dh->auto_increment  = false;
 			//lis3dh->data_ready      = false;
-			lis3dh->address_phase   = true;    // next data register addres
+			lis3dh->address_phase   = true;    // next data is register addres
             break;
             
         case I2C_START_RECV:    // Start of read operation
             /* Master is starting a READ operation 
             (requesting data from the device) */
+            printf("\n\n LIS3DH RECV");
 			if (lis3dh->ptr == 0xFF)
 				lis3dh->ptr = LIS3DH_REG_ACCEL_WHO_AM_I;
 			lis3dh->address_phase = false;
@@ -412,7 +386,8 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
             
         case I2C_FINISH:        // Stop condition
             /* Master ends the transaction 
-            (STOP condition) */			
+            (STOP condition) */
+            printf("\n\n LIS3DH STOP");
             break;
             
         case I2C_NACK:          // NACK received
@@ -441,7 +416,7 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 	{
 		__write_in_register( lis3dh, lis3dh->ptr, data);
 		if (lis3dh->auto_increment)
-			lis3dh->ptr++; //#TODO
+			lis3dh->ptr++; //#TODO  
 	}
 	return 0;
 }
@@ -449,8 +424,16 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 {
     LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+
     uint8_t value = __read_register( lis3dh );
-    printf("LIS3DH sending: 0x%02x\n", value);
+
+    printf("\nLIS3DH autoincrement: %s\n", lis3dh->auto_increment ? "true" : "false" );
+
+    if (lis3dh->auto_increment)
+        lis3dh->ptr++;
+
+    printf("\nLIS3DH sending: 0x%02x\n", value);
+    
 	return value;
 }
 

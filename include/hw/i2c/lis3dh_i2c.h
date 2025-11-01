@@ -36,7 +36,7 @@
     ACCELEROMETER ADDRESSES
 **************************************************************************/
 #define LIS3DH_DEFAULT_ADDRESS          ((uint8_t)0x18 << 1)    // if SDO/SA0 = 1 -> 0001 1000, then 0001 1000 << 1 = 00011 0000
-#define LIS3DH_ALTERNATIVE_ADDRESS      ((uint16_t)(0x19 << 1)) // if SDO/SA0 = 0 -> 0001 1001, then 0001 1001 << 1 = 00011 0010 
+#define LIS3DH_ALTERNATIVE_ADDRESS      ((uint8_t)0x19 << 1)    // if SDO/SA0 = 0 -> 0001 1001, then 0001 1001 << 1 = 00011 0010 
 
 #define LIS3DH_SUB_REG_MASK             0x7F                    // Mask to get the LIS3DH register direcction
 #define LIS3DH_SUB_AUTO_INC_MASK        0x80                    // Mask to get the Auto-increment bit
@@ -148,10 +148,14 @@
 **************************************************************************/
 #define LIS3DH_ACCELERATION_CONST   (9.81f)   //
 
+#define LIS3DH_HIGH_MODE_MAX    (int16_t)(2047)     //
+#define LIS3DH_HIGH_MODE_MIN    (int16_t)(-2048)    //
+
+
 /**************************************************************************
     PRIVET MACROS (m/s²)
 **************************************************************************/
-#define CASE_READ_RETURN(REG, FIELD)    case REG: return src->FIELD; break;
+#define CASE_READ_RETURN(VAL, REG, FIELD)    case REG: VAL = (src->FIELD); break;
 
 #define CASE_WRITE_RETURN(REG, FIELD)   case REG: dst->FIELD = src; return true; break;
 
