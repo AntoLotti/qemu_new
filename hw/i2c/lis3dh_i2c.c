@@ -3,6 +3,11 @@
 #include "qom/object.h"
 #include "qemu/log.h"
 #include "hw/irq.h"
+#include "migration/vmstate.h"
+#include "qapi/error.h"
+#include "qapi/visitor.h"
+#include "qemu/module.h"
+#include "hw/registerfields.h"
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 #include <math.h>
@@ -22,9 +27,14 @@ static void lis3dh_i2c_unrealize(DeviceState *dev);
 
 static int16_t __float_to_int16(float src);
 static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_axis_l );
-static void __acc_x_axis_data_generation(uint8_t* out_x_h, uint8_t* out_x_l);
-static void __acc_y_axis_data_generation(uint8_t* out_y_h, uint8_t* out_y_l);
-static void __acc_z_axis_data_generation(uint8_t* out_z_h, uint8_t* out_z_l);
+
+static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+
+static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
 
 /**************************************************************************
     ACCELEROMETER DATA GENERATION
@@ -77,25 +87,72 @@ static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_
 
 }
 
-static void __acc_x_axis_data_generation(uint8_t* out_x_h, uint8_t* out_x_l)
+
+static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
+
+    LIS3DHState *s = LIS3DH_I2C(obj);
+    int64_t value;
+
     // Data Generation In g //
-    float axis_data = -1.023f;      // -1,023g
-    __data_transformation( axis_data ,out_x_h, out_x_l );    
+    visit_type_int(v, name, &value, errp);
+
+    __data_transformation( (value * 1.0), &s->out_x_h, &s->out_x_l );
 }
 
-static void __acc_y_axis_data_generation(uint8_t* out_y_h, uint8_t* out_y_l)
+static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
+
+    LIS3DHState *s = LIS3DH_I2C(obj);
+    int64_t value;
+
     // Data Generation In g //
-    float axis_data = -1.023f;      // -1,023g
-    __data_transformation( axis_data, out_y_h, out_y_l ); 
+    visit_type_int(v, name, &value, errp);
+
+    __data_transformation( (value * 1.0), &s->out_y_h, &s->out_y_l );
 }
 
-static void __acc_z_axis_data_generation(uint8_t* out_z_h, uint8_t* out_z_l)
+static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
+
+    LIS3DHState *s = LIS3DH_I2C(obj);
+    int64_t value;
+
     // Data Generation In g //
-    float axis_data = -1.023f;      // -1,023g
-    __data_transformation( axis_data, out_z_h, out_z_l ); 
+    visit_type_int(v, name, &value, errp);
+
+    __data_transformation( (value * 1.0), &s->out_z_h, &s->out_z_l );
+}
+
+
+static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH_I2C(obj);
+
+    int16_t raw = ((int16_t)s->out_x_h << 8) | s->out_x_l;
+    int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
+}
+
+static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH_I2C(obj);
+
+    int16_t raw = ((int16_t)s->out_y_h << 8) | s->out_y_l;
+    int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
+}
+
+static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH_I2C(obj);
+
+    int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
+    int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
 }
 
 /**************************************************************************
@@ -145,10 +202,6 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
     lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
     lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
     lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
-    
-    __acc_x_axis_data_generation( &lis3dh->out_x_h, &lis3dh->out_x_l);
-    __acc_y_axis_data_generation( &lis3dh->out_y_h, &lis3dh->out_y_l);
-    __acc_z_axis_data_generation( &lis3dh->out_z_h, &lis3dh->out_z_l);
 
     lis3dh->out_x_l         = 0x10;//LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
     lis3dh->out_x_h         = 0xc0;//LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
@@ -440,6 +493,21 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 /**************************************************************************
     LIS3DH REGISTRATION IN QEMU 
 **************************************************************************/
+
+// Example for your LIS3DH
+static void lis3dh_initfn(Object *obj)
+{
+    object_property_add(obj, "accel-x", "int",
+                        lis3dh_get_accel_x,
+                        lis3dh_set_accel_x, NULL, NULL);
+    object_property_add(obj, "accel-y", "int",
+                        lis3dh_get_accel_y, 
+                        lis3dh_set_accel_y, NULL, NULL);
+    object_property_add(obj, "accel-z", "int",
+                        lis3dh_get_accel_z,
+                        lis3dh_set_accel_z, NULL, NULL);
+}
+
 /* LIS3DH class initialization */
 static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
 {
@@ -465,6 +533,7 @@ static const TypeInfo lis3dh_i2c_info =
     .name           = TYPE_LIS3DH_I2C, 
     .parent         = TYPE_I2C_SLAVE,
     .instance_size  = sizeof(LIS3DHState),
+    .instance_init  = lis3dh_initfn,
     .class_init     = lis3dh_i2c_class_init,
 };
 

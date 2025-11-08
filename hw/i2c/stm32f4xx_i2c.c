@@ -42,6 +42,7 @@
 static bool flg_sb      = false;
 static bool flg_addr    = false;
 static bool flg_stop    = false;
+static bool flg_second  = false;
 
 /**************************************************************************
     I2C FUNCTIONS
@@ -84,10 +85,10 @@ static bool __stm32f4xx_i2c_receiver_stop_condition(STM32F4XXI2CState* src)
 
     return
     ( 
-        ( (src->state == STM32F4xx_I2C_STATE_ADDR_SENT_READ)
-            || (src->state == STM32F4xx_I2C_STATE_RECEIVING) )
-        && ( (src->i2c_cr1 & STM_I2C_ACK_BIT) == 0 )
-        && flg_stop
+        ((src->state == STM32F4xx_I2C_STATE_ADDR_SENT_READ) ||
+         (src->state == STM32F4xx_I2C_STATE_RECEIVING)) &&
+        ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0) &&
+        flg_stop
     );
 }
 
@@ -157,9 +158,7 @@ static void stm32f4xx_i2c_begin_transfer(STM32F4XXI2CState* src)
             src->i2c_sr1 |= STM_I2C_BTF_BIT;
             src->state = STM32F4xx_I2C_STATE_ADDR_SENT_READ;
         }
-
     }
-
 }
 
 static void stm32f4xx_i2c_stop_generation(STM32F4XXI2CState* src)
@@ -205,8 +204,11 @@ static void stm32f4xx_i2c_data_recive(STM32F4XXI2CState *src)
         i2c_nack(src->bus);
         i2c_end_transfer(src->bus);
         stm32f4xx_i2c_stop_generation(src);
-    }else
+    }
+    else
     {
+        // 
+
         src->i2c_sr1 |= STM_I2C_RXNE_BIT;
         src->i2c_sr1 |= STM_I2C_BTF_BIT;
         src->state = STM32F4xx_I2C_STATE_RECEIVING;
@@ -358,7 +360,7 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
                     __func__, addr);
     }
 
-    printf(" Value read = 0x%02lx", readval);
+    printf("\n Value read = 0x%02lx", readval);
     return readval;
 }
 
@@ -445,7 +447,6 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
                     
                     //i2c_end_transfer(s->bus);
 
-                    s->i2c_sr1 |= STM_I2C_START_BIT;    // Start Bit flag
                     s->i2c_sr1 |= STM_I2C_SB_BIT;       // Start Bit flag
                     s->i2c_sr2 |= STM_I2C_MSL_BIT;      // Master mode
                     s->i2c_sr2 |= STM_I2C_BUSY_BIT;     // Bus busy
@@ -464,7 +465,6 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
                 {  
                     printf("STM32 Start condition requested\n");
                     
-                    s->i2c_sr1 |= STM_I2C_START_BIT;    // Start Bit flag
                     s->i2c_sr1 |= STM_I2C_SB_BIT;       // Start Bit flag
                     s->i2c_sr2 |= STM_I2C_MSL_BIT;      // Master mode
                     s->i2c_sr2 |= STM_I2C_BUSY_BIT;     // Bus busy
@@ -505,6 +505,7 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 
                 printf("Stop condition requested\n");
                 flg_stop = true;
+                flg_second = false;
 
                 // Generate a transmision STOP condition
                 if ( __stm32f4xx_i2c_transmitter_stop_condition(s) ) 
@@ -541,11 +542,15 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
                     printf("ERROR: ACK bit seted but peripheral not enabled\n");
                     return;
                 }
+                else
+                {
+                    s->i2c_cr1 |= STM_I2C_ACK_BIT;
+                }
             }
             else
             {
-                //printf("ACK disabled (NACK)\n");
-                //s->i2c_cr1 &= ~STM_I2C_ACK_BIT;
+                printf("\n STM32 ACK disabled (NACK)\n");
+                s->i2c_cr1 &= ~STM_I2C_ACK_BIT;
             }
             
             // POS bit handling (Bit 11)
@@ -603,12 +608,10 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
             // Handeling Data Sending To Slave
             if ( __stm32f4xx_i2c_transmitting_condition(s) )
                 stm32f4xx_i2c_data_transfer(s);
-//                stm32f4xx_i2c_data_transfer(s, value);
 
             // Handeling Address Sending To Slave
             if ( __stm32f4xx_i2c_address_condition(s) )
                 stm32f4xx_i2c_begin_transfer(s);
-//                stm32f4xx_i2c_begin_transfer(s, value);
 
             break;
 
