@@ -275,14 +275,14 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
         sysbus_connect_irq(busdev, 1,
                            qdev_get_gpio_in(armv7m, i2c_irq[i*2+1]));
 
-        // Store the bus pointers to expose them for the hot plug
+        // Store the bus pointers for easy access
         //if (i == 0) s->i2c1_bus = s->i2c[i].bus;
         //if (i == 1) s->i2c2_bus = s->i2c[i].bus;
         //if (i == 2) s->i2c3_bus = s->i2c[i].bus;             
     }
 
     /* LIS3DH to I2C1 */
-    lis3dh = qdev_new(TYPE_LIS3DH_I2C);                                             // Creating LIS3DH accelerometer
+    lis3dh = qdev_new(TYPE_LIS3DH);                                                 // Creating LIS3DH accelerometer
     i2c_slave_set_address(I2C_SLAVE(lis3dh), 0x18);                                 //Setting I2C address to 0x18    
     i2c_slave_realize_and_unref(I2C_SLAVE(lis3dh), s->i2c[0].bus, &error_fatal);    // Connecting to I2C1 bus
 

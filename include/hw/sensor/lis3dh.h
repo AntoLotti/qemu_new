@@ -163,8 +163,8 @@
     DEVICE STRUCTURES AND QOM DECLARATION
 **************************************************************************/
 /* Declaration of the QOM for the LIS3DH */
-#define TYPE_LIS3DH_I2C "lis3dh-i2c"
-OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH_I2C);
+#define TYPE_LIS3DH "lis3dh"
+OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH);
 
 /* LIS3DH State struct requirements (the hardware) */
 typedef struct LIS3DHState

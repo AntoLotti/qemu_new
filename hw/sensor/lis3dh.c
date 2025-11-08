@@ -1,5 +1,5 @@
 #include "qemu/osdep.h"
-#include "hw/i2c/lis3dh_i2c.h"
+#include "hw/sensor/lis3dh.h"
 #include "qom/object.h"
 #include "qemu/log.h"
 #include "hw/irq.h"
@@ -91,7 +91,7 @@ static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_
 static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
 
-    LIS3DHState *s = LIS3DH_I2C(obj);
+    LIS3DHState *s = LIS3DH(obj);
     int64_t value;
 
     // Data Generation In g //
@@ -103,7 +103,7 @@ static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
 
-    LIS3DHState *s = LIS3DH_I2C(obj);
+    LIS3DHState *s = LIS3DH(obj);
     int64_t value;
 
     // Data Generation In g //
@@ -115,7 +115,7 @@ static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
 
-    LIS3DHState *s = LIS3DH_I2C(obj);
+    LIS3DHState *s = LIS3DH(obj);
     int64_t value;
 
     // Data Generation In g //
@@ -127,7 +127,7 @@ static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *
 
 static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
-    LIS3DHState *s = LIS3DH_I2C(obj);
+    LIS3DHState *s = LIS3DH(obj);
 
     int16_t raw = ((int16_t)s->out_x_h << 8) | s->out_x_l;
     int64_t value = raw >> 4;
@@ -137,7 +137,7 @@ static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *
 
 static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
-    LIS3DHState *s = LIS3DH_I2C(obj);
+    LIS3DHState *s = LIS3DH(obj);
 
     int16_t raw = ((int16_t)s->out_y_h << 8) | s->out_y_l;
     int64_t value = raw >> 4;
@@ -147,7 +147,7 @@ static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *
 
 static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
-    LIS3DHState *s = LIS3DH_I2C(obj);
+    LIS3DHState *s = LIS3DH(obj);
 
     int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
     int64_t value = raw >> 4;
@@ -233,7 +233,7 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
 static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 {
     printf("QEMU LIS3DH realize\n");
-    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
+    LIS3DHState *lis3dh = LIS3DH(dev);
     
     /* Initialize I2C state */
     lis3dh->address         = LIS3DH_DEFAULT_ADDRESS;
@@ -260,7 +260,7 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 
 static void lis3dh_i2c_unrealize(DeviceState *dev)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
+    LIS3DHState *lis3dh = LIS3DH(dev);
 
     timer_del(lis3dh->timer);
     timer_free(lis3dh->timer);
@@ -414,7 +414,7 @@ static uint8_t __read_register( LIS3DHState *src )
 
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH(i2c);
     
     switch (event) 
     {
@@ -456,7 +456,7 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 
 static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH(i2c);
 
     printf("\n\n LIS3DH received: 0x%02x\n", data);
 
@@ -476,7 +476,7 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH(i2c);
 
     uint8_t value = __read_register( lis3dh );
 
@@ -530,7 +530,7 @@ static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
 /* Tells QEMU’s type system how to create and wire the LIS3DH object class. */
 static const TypeInfo lis3dh_i2c_info = 
 {
-    .name           = TYPE_LIS3DH_I2C, 
+    .name           = TYPE_LIS3DH, 
     .parent         = TYPE_I2C_SLAVE,
     .instance_size  = sizeof(LIS3DHState),
     .instance_init  = lis3dh_initfn,
