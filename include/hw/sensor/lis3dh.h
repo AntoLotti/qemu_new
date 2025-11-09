@@ -144,6 +144,96 @@
 #define LIS3DH_ACT_DUR_DEF                  LIS3DH_REGS_DEF     // 
 
 /**************************************************************************
+    REGISTERS BIT
+**************************************************************************/
+#define LIS3DH_STATUS_REG_AUX_BIT_31OR      (uint8_t)BIT(7)
+#define LIS3DH_STATUS_REG_AUX_BIT_3OR       (uint8_t)BIT(6)
+#define LIS3DH_STATUS_REG_AUX_BIT_2OR       (uint8_t)BIT(5)
+#define LIS3DH_STATUS_REG_AUX_BIT_1OR       (uint8_t)BIT(4)
+#define LIS3DH_STATUS_REG_AUX_BIT_321DA     (uint8_t)BIT(3)
+#define LIS3DH_STATUS_REG_AUX_BIT_3DA       (uint8_t)BIT(2)
+#define LIS3DH_STATUS_REG_AUX_BIT_2DA       (uint8_t)BIT(1)
+#define LIS3DH_STATUS_REG_AUX_BIT_1DA       (uint8_t)BIT(0)
+
+#define LIS3DH_CTRL_REG0_BIT_SDO_PU_DISC    (uint8_t)BIT(7)
+
+#define LIS3DH_TEMP_CFG_BIT_REG_ADC_EN      (uint8_t)BIT(7)
+#define LIS3DH_TEMP_CFG_BIT_REG_TEMP_EN     (uint8_t)BIT(6)
+
+#define LIS3DH_CTRL_REG1_BIT_ODR3           (uint8_t)BIT(7)
+#define LIS3DH_CTRL_REG1_BIT_ODR2           (uint8_t)BIT(6)
+#define LIS3DH_CTRL_REG1_BIT_ODR1           (uint8_t)BIT(5)
+#define LIS3DH_CTRL_REG1_BIT_ODR0           (uint8_t)BIT(4)
+#define LIS3DH_CTRL_REG1_BIT_LPEN           (uint8_t)BIT(3)
+#define LIS3DH_CTRL_REG1_BIT_ZEN            (uint8_t)BIT(2)
+#define LIS3DH_CTRL_REG1_BIT_YEN            (uint8_t)BIT(1)
+#define LIS3DH_CTRL_REG1_BIT_XEN            (uint8_t)BIT(0)
+
+#define LIS3DH_CTRL_REG2_BITS_HMP           (uint8_t)(0xC0)
+#define LIS3DH_CTRL_REG2_BITS_HMCF          (uint8_t)(0x30)
+#define LIS3DH_CTRL_REG2_BIT_FDS            (uint8_t)BIT(3)
+#define LIS3DH_CTRL_REG2_BIT_HPCLICK        (uint8_t)BIT(2)
+#define LIS3DH_CTRL_REG2_BIT_HP_IA2         (uint8_t)BIT(1)
+#define LIS3DH_CTRL_REG2_BIT_HP_IA1         (uint8_t)BIT(0)
+
+#define LIS3DH_CTRL_REG3_BIT_I1_CLICK       (uint8_t)BIT(7)
+#define LIS3DH_CTRL_REG3_BIT_I1_IA1         (uint8_t)BIT(6)
+#define LIS3DH_CTRL_REG3_BIT_I1_IA2         (uint8_t)BIT(5)
+#define LIS3DH_CTRL_REG3_BIT_I1_ZYXDA       (uint8_t)BIT(4)
+#define LIS3DH_CTRL_REG3_BIT_I1_321DA       (uint8_t)BIT(3)
+#define LIS3DH_CTRL_REG3_BIT_I1_WTM         (uint8_t)BIT(2)
+#define LIS3DH_CTRL_REG3_BIT_I1_OVERRUN     (uint8_t)BIT(1)
+
+#define LIS3DH_CTRL_REG4_BIT_BDU            (uint8_t)BIT(7)
+#define LIS3DH_CTRL_REG4_BIT_BLE            (uint8_t)BIT(6)
+#define LIS3DH_CTRL_REG4_BITS_FS            (uint8_t)(0x30)
+#define LIS3DH_CTRL_REG4_BIT_HR             (uint8_t)BIT(3)
+#define LIS3DH_CTRL_REG4_BITS_ST            (uint8_t)(0x06)
+#define LIS3DH_CTRL_REG4_BIT_SIM            (uint8_t)BIT(0)
+
+#define LIS3DH_CTRL_REG5_BIT_BOOT           (uint8_t)BIT(7)
+#define LIS3DH_CTRL_REG5_BIT_FIFO_EN        (uint8_t)BIT(6)
+#define LIS3DH_CTRL_REG5_BIT_LIR_INT1       (uint8_t)BIT(3)
+#define LIS3DH_CTRL_REG5_BIT_D4D_INT1       (uint8_t)BIT(2)
+#define LIS3DH_CTRL_REG5_BIT_LIR_INT2       (uint8_t)BIT(1)
+#define LIS3DH_CTRL_REG5_BIT_D4D_INT2       (uint8_t)BIT(0)
+
+#define LIS3DH_CTRL_REG6_BIT_I2_CLICK       (uint8_t)BIT(7)
+#define LIS3DH_CTRL_REG6_BIT_I2_IA1         (uint8_t)BIT(6)
+#define LIS3DH_CTRL_REG6_BIT_I2_IA2         (uint8_t)BIT(5)
+#define LIS3DH_CTRL_REG6_BIT_I2_BOOT        (uint8_t)BIT(4)
+#define LIS3DH_CTRL_REG6_BIT_I2_ACT         (uint8_t)BIT(3)
+#define LIS3DH_CTRL_REG6_BIT_I2_POLARITY    (uint8_t)BIT(1)
+
+#define LIS3DH_REFERENCE                    (uint8_t)(0xFF)
+
+#define LIS3DH_STATUS_REG_BIT_ZYXOR         (uint8_t)BIT(7)
+#define LIS3DH_STATUS_REG_BIT_ZOR           (uint8_t)BIT(6)
+#define LIS3DH_STATUS_REG_BIT_YOR           (uint8_t)BIT(5)
+#define LIS3DH_STATUS_REG_BIT_XOR           (uint8_t)BIT(4)
+#define LIS3DH_STATUS_REG_BIT_ZYXDA         (uint8_t)BIT(3)
+#define LIS3DH_STATUS_REG_BIT_ZDA           (uint8_t)BIT(2)
+#define LIS3DH_STATUS_REG_BIT_YDA           (uint8_t)BIT(1)
+#define LIS3DH_STATUS_REG_BIT_XDA           (uint8_t)BIT(0)
+
+#define LIS3DH_FIFO_CTRL_REG_BITS_FM        (uint8_t)(0xC0)
+#define LIS3DH_FIFO_CTRL_REG_BIT_TR         (uint8_t)BIT(5)
+
+#define LIS3DH_FIFO_SRC_REG_BIT_WTM         (uint8_t)BIT(7)
+#define LIS3DH_FIFO_SRC_REG_BIT_OVRN_FIFO   (uint8_t)BIT(6)
+#define LIS3DH_FIFO_SRC_REG_BIT_EMPTY       (uint8_t)BIT(5)
+#define LIS3DH_FIFO_SRC_REG_BITS_FSS        (uint8_t)(0x1F)
+
+#define LIS3DH_INT1_CFG_BIT_AOI             (uint8_t)BIT(7)
+#define LIS3DH_INT1_CFG_BIT_OVERN_FIFO      (uint8_t)BIT(6)
+#define LIS3DH_INT1_CFG_BIT_EMPTY           (uint8_t)BIT(5)
+#define LIS3DH_INT1_CFG_BIT_FSS4            (uint8_t)BIT(4)
+#define LIS3DH_INT1_CFG_BIT_FSS3            (uint8_t)BIT(3)
+#define LIS3DH_INT1_CFG_BIT_FSS2            (uint8_t)BIT(2)
+#define LIS3DH_INT1_CFG_BIT_FSS1            (uint8_t)BIT(1)
+#define LIS3DH_INT1_CFG_BIT_FSS0            (uint8_t)BIT(0)         
+
+/**************************************************************************
     ACCELERATION CONSTANT (m/s²)
 **************************************************************************/
 #define LIS3DH_ACCELERATION_CONST   (9.81f)   //
@@ -151,17 +241,37 @@
 #define LIS3DH_HIGH_MODE_MAX    (int16_t)(2047)     //
 #define LIS3DH_HIGH_MODE_MIN    (int16_t)(-2048)    //
 
+/**************************************************************************
+    ACCELEROMETER MODE TYPES
+**************************************************************************/
+
+typedef enum LIS3DH_FullScale_e
+{
+    LIS3DH_FS_2G    = 0,
+    LIS3DH_FS_4G    = 1,
+    LIS3DH_FS_8G    = 2,
+    LIS3DH_FS_16G   = 3
+}LIS3DH_FullScale_t;
+
+typedef enum LIS3DH_Mode_e
+{
+    LIS3DH_MODE_NORMAL      = 0,
+    LIS3DH_MODE_HIGH_RES    = 1,
+    LIS3DH_MODE_LOW_POWER   = 2,
+    LIS3DH_MODE_NOT_ALLOWED = 3,
+}LIS3DH_Mode_t;
 
 /**************************************************************************
-    PRIVET MACROS (m/s²)
+    PRIVET MACROS
 **************************************************************************/
-#define CASE_READ_RETURN(VAL, REG, FIELD)    case REG: VAL = (src->FIELD); break;
+#define CASE_READ_RETURN(VAL, REG, FIELD)   case REG: VAL = (src->FIELD); break;
 
-#define CASE_WRITE_RETURN(REG, FIELD)   case REG: dst->FIELD = src; return true; break;
+#define CASE_WRITE_RETURN(REG, FIELD)       case REG: dst->FIELD = src; return true; break;
 
 /**************************************************************************
     DEVICE STRUCTURES AND QOM DECLARATION
 **************************************************************************/
+
 /* Declaration of the QOM for the LIS3DH */
 #define TYPE_LIS3DH "lis3dh"
 OBJECT_DECLARE_SIMPLE_TYPE(LIS3DHState, LIS3DH);
