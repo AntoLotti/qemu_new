@@ -34,7 +34,7 @@
 #include "hw/gpio/stm32_gpio.h"
 #include "hw/or-irq.h"
 #include "hw/ssi/stm32f2xx_spi.h"
-#include "hw/i2c/lis3dh_i2c.h"
+#include "hw/sensor/lis3dh.h"
 #include "hw/i2c/stm32f4xx_i2c.h"
 #include "hw/arm/armv7m.h"
 #include "qom/object.h"

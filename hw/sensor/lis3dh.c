@@ -1,8 +1,13 @@
 #include "qemu/osdep.h"
-#include "hw/i2c/lis3dh_i2c.h"
+#include "hw/sensor/lis3dh.h"
 #include "qom/object.h"
 #include "qemu/log.h"
 #include "hw/irq.h"
+#include "migration/vmstate.h"
+#include "qapi/error.h"
+#include "qapi/visitor.h"
+#include "qemu/module.h"
+#include "hw/registerfields.h"
 #include "hw/qdev-properties.h"
 #include "migration/vmstate.h"
 #include <math.h>
@@ -11,20 +16,31 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event);
 static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data);
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c);
 
+static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src);
+static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src);
+
 static bool __reserved_address( uint8_t src);
 static bool __write_in_register( LIS3DHState *dst, uint8_t dir, uint8_t src );
 static uint8_t __read_register( LIS3DHState *src );
 
-static void __lis3dh_i2c_update_data(void *src);
-static void __lis3dh_i2c_reset(LIS3DHState *lis3dh);
-static void lis3dh_i2c_realize(DeviceState *dev, Error **errp);
-static void lis3dh_i2c_unrealize(DeviceState *dev);
+static void __lis3dh_update_data(void *src);
+static void __lis3dh_reset(LIS3DHState *lis3dh);
+static void lis3dh_realize(DeviceState *dev, Error **errp);
+static void lis3dh_unrealize(DeviceState *dev);
 
 static int16_t __float_to_int16(float src);
 static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_axis_l );
-static void __acc_x_axis_data_generation(uint8_t* out_x_h, uint8_t* out_x_l);
-static void __acc_y_axis_data_generation(uint8_t* out_y_h, uint8_t* out_y_l);
-static void __acc_z_axis_data_generation(uint8_t* out_z_h, uint8_t* out_z_l);
+
+static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+
+static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+
+//static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+//static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
 
 /**************************************************************************
     ACCELEROMETER DATA GENERATION
@@ -77,31 +93,78 @@ static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_
 
 }
 
-static void __acc_x_axis_data_generation(uint8_t* out_x_h, uint8_t* out_x_l)
+
+static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
+
+    LIS3DHState *s = LIS3DH(obj);
+    int64_t value;
+
     // Data Generation In g //
-    float axis_data = -1.023f;      // -1,023g
-    __data_transformation( axis_data ,out_x_h, out_x_l );    
+    visit_type_int(v, name, &value, errp);
+
+    __data_transformation( (value * 1.0), &s->out_x_h, &s->out_x_l );
 }
 
-static void __acc_y_axis_data_generation(uint8_t* out_y_h, uint8_t* out_y_l)
+static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
+
+    LIS3DHState *s = LIS3DH(obj);
+    int64_t value;
+
     // Data Generation In g //
-    float axis_data = -1.023f;      // -1,023g
-    __data_transformation( axis_data, out_y_h, out_y_l ); 
+    visit_type_int(v, name, &value, errp);
+
+    __data_transformation( (value * 1.0), &s->out_y_h, &s->out_y_l );
 }
 
-static void __acc_z_axis_data_generation(uint8_t* out_z_h, uint8_t* out_z_l)
+static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
+
+    LIS3DHState *s = LIS3DH(obj);
+    int64_t value;
+
     // Data Generation In g //
-    float axis_data = -1.023f;      // -1,023g
-    __data_transformation( axis_data, out_z_h, out_z_l ); 
+    visit_type_int(v, name, &value, errp);
+
+    __data_transformation( (value * 1.0), &s->out_z_h, &s->out_z_l );
+}
+
+
+static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH(obj);
+
+    int16_t raw = ((int16_t)s->out_x_h << 8) | s->out_x_l;
+    int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
+}
+
+static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH(obj);
+
+    int16_t raw = ((int16_t)s->out_y_h << 8) | s->out_y_l;
+    int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
+}
+
+static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH(obj);
+
+    int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
+    int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
 }
 
 /**************************************************************************
     DEVICE LIFE FUNCTIONS
 **************************************************************************/
-static void __lis3dh_i2c_update_data(void *src)
+static void __lis3dh_update_data(void *src)
 {
     (void)src;
     //LIS3DHState *lis3dh = src;
@@ -122,7 +185,7 @@ static void __lis3dh_i2c_update_data(void *src)
     //);
 }
 
-static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
+static void __lis3dh_reset(LIS3DHState *lis3dh)
 {
     // directions [0x00-0x06] reserved
     lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_AUX_DEF;    // Status Register
@@ -145,10 +208,6 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
     lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
     lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
     lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
-    
-    __acc_x_axis_data_generation( &lis3dh->out_x_h, &lis3dh->out_x_l);
-    __acc_y_axis_data_generation( &lis3dh->out_y_h, &lis3dh->out_y_l);
-    __acc_z_axis_data_generation( &lis3dh->out_z_h, &lis3dh->out_z_l);
 
     lis3dh->out_x_l         = 0x10;//LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
     lis3dh->out_x_h         = 0xc0;//LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
@@ -177,10 +236,10 @@ static void __lis3dh_i2c_reset(LIS3DHState *lis3dh)
     lis3dh->act_dur         = LIS3DH_ACT_DUR_DEF;           //
 }
 
-static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
+static void lis3dh_realize(DeviceState *dev, Error **errp)
 {
     printf("QEMU LIS3DH realize\n");
-    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
+    LIS3DHState *lis3dh = LIS3DH(dev);
     
     /* Initialize I2C state */
     lis3dh->address         = LIS3DH_DEFAULT_ADDRESS;
@@ -190,7 +249,7 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
 	lis3dh->address_phase   = false;
 
     /* Create data update timer */
-    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, __lis3dh_i2c_update_data, lis3dh);
+    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, __lis3dh_update_data, lis3dh);
     timer_mod
     (
         lis3dh->timer, 
@@ -198,24 +257,47 @@ static void lis3dh_i2c_realize(DeviceState *dev, Error **errp)
     ); // 100Hz update
     
     /* Reset registers */
-    __lis3dh_i2c_reset(lis3dh);
+    __lis3dh_reset(lis3dh);
         
     /* Enable hotplug */
     /*DeviceClass *dc = DEVICE_GET_CLASS(dev);
     dc->hotpluggable = true;*/
 }
 
-static void lis3dh_i2c_unrealize(DeviceState *dev)
+static void lis3dh_unrealize(DeviceState *dev)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(dev);
+    LIS3DHState *lis3dh = LIS3DH(dev);
 
     timer_del(lis3dh->timer);
     timer_free(lis3dh->timer);
 }
 
-/**************************************************************************
-    I2C FUNCTIONS
-**************************************************************************/
+static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src)
+{
+    LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
+
+    uint8_t temp =  
+        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
+        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
+
+    if ( !( temp >= LIS3DH_MODE_NOT_ALLOWED) )
+        mode = temp;
+
+    return mode;
+}
+
+static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src)
+{
+    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
+
+    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
+
+    if ( !( temp > LIS3DH_FS_16G) )
+        fs = temp;
+
+    return fs;
+}
+
 static bool __reserved_address( uint8_t src)
 {
     if ( src == 0x0E )
@@ -298,8 +380,6 @@ static bool __write_in_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
 
 static uint8_t __read_register( LIS3DHState *src )
 {
-    if (__reserved_address(src->ptr))
-        return 0;
     
     printf("\n\n LIS3DH read ptr: 0x%x", src->ptr);
     
@@ -359,9 +439,12 @@ static uint8_t __read_register( LIS3DHState *src )
     return ret;
 }
 
+/**************************************************************************
+    I2C FUNCTIONS
+**************************************************************************/
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH(i2c);
     
     switch (event) 
     {
@@ -403,7 +486,7 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 
 static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH(i2c);
 
     printf("\n\n LIS3DH received: 0x%02x\n", data);
 
@@ -423,7 +506,7 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 {
-    LIS3DHState *lis3dh = LIS3DH_I2C(i2c);
+    LIS3DHState *lis3dh = LIS3DH(i2c);
 
     uint8_t value = __read_register( lis3dh );
 
@@ -440,16 +523,31 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 /**************************************************************************
     LIS3DH REGISTRATION IN QEMU 
 **************************************************************************/
+
+// Example for your LIS3DH
+static void lis3dh_initfn(Object *obj)
+{
+    object_property_add(obj, "accel-x", "int",
+                        lis3dh_get_accel_x,
+                        lis3dh_set_accel_x, NULL, NULL);
+    object_property_add(obj, "accel-y", "int",
+                        lis3dh_get_accel_y, 
+                        lis3dh_set_accel_y, NULL, NULL);
+    object_property_add(obj, "accel-z", "int",
+                        lis3dh_get_accel_z,
+                        lis3dh_set_accel_z, NULL, NULL);
+}
+
 /* LIS3DH class initialization */
-static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
+static void lis3dh_class_init( ObjectClass *kclass, void *data )
 {
     printf("\n Qemu LIS3DH class init \n");
     DeviceClass *dc     = DEVICE_CLASS(kclass);     // The generic device class operations
     I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);  // The I2C-specific interface implementation
     
     /* Device lifecycle */
-    dc->realize         = lis3dh_i2c_realize;           // Called when device created
-    dc->unrealize       = lis3dh_i2c_unrealize;         // Clean up
+    dc->realize         = lis3dh_realize;           // Called when device created
+    dc->unrealize       = lis3dh_unrealize;         // Clean up
     dc->hotpluggable    = false;
     dc->desc            = "I2C accelerometer: LIS3DH"; 
     
@@ -462,10 +560,11 @@ static void lis3dh_i2c_class_init( ObjectClass *kclass, void *data )
 /* Tells QEMU’s type system how to create and wire the LIS3DH object class. */
 static const TypeInfo lis3dh_i2c_info = 
 {
-    .name           = TYPE_LIS3DH_I2C, 
+    .name           = TYPE_LIS3DH, 
     .parent         = TYPE_I2C_SLAVE,
     .instance_size  = sizeof(LIS3DHState),
-    .class_init     = lis3dh_i2c_class_init,
+    .instance_init  = lis3dh_initfn,
+    .class_init     = lis3dh_class_init,
 };
 
 /* Add LIS3DH object class into Qemu core */
