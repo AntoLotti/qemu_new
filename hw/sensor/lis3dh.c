@@ -16,8 +16,8 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event);
 static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data);
 static uint8_t lis3dh_i2c_recv(I2CSlave *i2c);
 
-static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src);
-static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src);
+//static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src);
+//static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src);
 
 static bool __reserved_address( uint8_t src);
 static bool __write_in_register( LIS3DHState *dst, uint8_t dir, uint8_t src );
@@ -272,31 +272,31 @@ static void lis3dh_unrealize(DeviceState *dev)
     timer_free(lis3dh->timer);
 }
 
-static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src)
-{
-    LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
+//static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src)
+//{
+//    LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
+//
+//    uint8_t temp =  
+//        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
+//        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
+//
+//    if ( !( temp >= LIS3DH_MODE_NOT_ALLOWED) )
+//        mode = temp;
+//
+//    return mode;
+//}
 
-    uint8_t temp =  
-        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
-        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
-
-    if ( !( temp >= LIS3DH_MODE_NOT_ALLOWED) )
-        mode = temp;
-
-    return mode;
-}
-
-static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src)
-{
-    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
-
-    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
-
-    if ( !( temp > LIS3DH_FS_16G) )
-        fs = temp;
-
-    return fs;
-}
+//static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src)
+//{
+//    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
+//
+//    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
+//
+//    if ( !( temp > LIS3DH_FS_16G) )
+//        fs = temp;
+//
+//    return fs;
+//}
 
 static bool __reserved_address( uint8_t src)
 {
