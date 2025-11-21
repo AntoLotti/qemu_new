@@ -140,7 +140,7 @@
 OBJECT_DECLARE_SIMPLE_TYPE(STM32F4XXI2CState, STM32F4XX_I2C)
 
 /* I2C state machine */
-typedef enum stm32f4xx_i2c_states_e
+typedef enum states_e
 {
     STM32F4xx_I2C_STATE_DISABLED,
     STM32F4xx_I2C_STATE_IDLE,
@@ -149,10 +149,18 @@ typedef enum stm32f4xx_i2c_states_e
     STM32F4xx_I2C_STATE_ADDR_SENT_WRITE,      // Address sent (write mode), waiting for ADDR clear  
     STM32F4xx_I2C_STATE_RECEIVING,            // In receiver mode, receiving data
     STM32F4xx_I2C_STATE_TRANSMITTING,         // In transmitter mode, sending data
-}stm32f4xx_i2c_states_t;
+}states_t;
+
+typedef struct flags_s
+{
+    bool flg_sb;
+    bool flg_stop;
+    bool flg_addr;
+}flags_t;
 
 /* STM32 I2C State struct requirements (the hardware) */
-typedef struct STM32F4XXI2CState{
+typedef struct STM32F4XXI2CState
+{
     /* <private> */
     SysBusDevice parent_obj;
 
@@ -163,7 +171,9 @@ typedef struct STM32F4XXI2CState{
     qemu_irq irq_error;
 
     char *bus_name;
-    stm32f4xx_i2c_states_t state;
+    states_t state;
+    flags_t flags;
+
     uint8_t slv_address;
 
     uint32_t i2c_cr1; 
