@@ -176,16 +176,16 @@ typedef struct STM32F4XXI2CState
 
     uint8_t slv_address;
 
-    uint32_t i2c_cr1; 
-    uint32_t i2c_cr2; 
-    uint32_t i2c_oar1; 
-    uint32_t i2c_oar2; 
-    uint32_t i2c_dr; 
-    uint32_t i2c_sr1; 
-    uint32_t i2c_sr2; 
-    uint32_t i2c_ccr; 
-    uint32_t i2c_trise; 
-    uint32_t i2c_fltr; 
+    uint32_t i2c_cr1;
+    uint32_t i2c_cr2;
+    uint32_t i2c_oar1;
+    uint32_t i2c_oar2;
+    uint32_t i2c_dr;
+    uint32_t i2c_sr1;
+    uint32_t i2c_sr2;
+    uint32_t i2c_ccr;
+    uint32_t i2c_trise;
+    uint32_t i2c_fltr;
 
 }STM32F4XXI2CState;
 
