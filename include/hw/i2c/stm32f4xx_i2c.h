@@ -142,13 +142,19 @@ OBJECT_DECLARE_SIMPLE_TYPE(STM32F4XXI2CState, STM32F4XX_I2C)
 /* I2C state machine */
 typedef enum states_e
 {
-    STM32F4xx_I2C_STATE_DISABLED,
-    STM32F4xx_I2C_STATE_IDLE,
-    STM32F4xx_I2C_STATE_START_SENT,           // START sent, waiting for address
-    STM32F4xx_I2C_STATE_ADDR_SENT_READ,       // Address sent (read mode), waiting for ADDR clear
-    STM32F4xx_I2C_STATE_ADDR_SENT_WRITE,      // Address sent (write mode), waiting for ADDR clear  
-    STM32F4xx_I2C_STATE_RECEIVING,            // In receiver mode, receiving data
-    STM32F4xx_I2C_STATE_TRANSMITTING,         // In transmitter mode, sending data
+    STM32F4XX_I2C_DISABLED,
+    STM32F4XX_I2C_IDLE,
+    STM32F4XX_I2C_START,
+    STM32F4XX_I2C_SENT_READ,
+    STM32F4XX_I2C_SENT_WRITE,
+    STM32F4XX_I2C_RECEIVING_1BYTE,
+    STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,
+    STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE,
+    STM32F4XX_I2C_RECEIVING_3BYTES,
+    STM32F4XX_I2C_RECEIVING_N_BYTES,
+    STM32F4XX_I2C_TRANSMITTING,
+    //STM32F4xx_I2C_STATE_RECEIVING,            // In receiver mode, receiving data
+    //STM32F4xx_I2C_STATE_TRANSMITTING,         // In transmitter mode, sending data
 }states_t;
 
 typedef struct flags_s
@@ -186,6 +192,8 @@ typedef struct STM32F4XXI2CState
     uint32_t i2c_ccr;
     uint32_t i2c_trise;
     uint32_t i2c_fltr;
+
+    uint32_t* i2c_buffer;
 
 }STM32F4XXI2CState;
 
