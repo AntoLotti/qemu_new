@@ -35,36 +35,36 @@
 /**************************************************************************
     I2C REGISTERS ADDRESSES
 **************************************************************************/
-#define  STM_I2C_REG_CR1    ((uint8_t)(0x00))	// 
-#define  STM_I2C_REG_CR2    ((uint8_t)(0x04))	// 
-#define  STM_I2C_REG_OAR1   ((uint8_t)(0x08))	// 
-#define  STM_I2C_REG_OAR2   ((uint8_t)(0x0C))	// 
-#define  STM_I2C_REG_DR     ((uint8_t)(0x10))	// 
-#define  STM_I2C_REG_SR1    ((uint8_t)(0x14))	// 
-#define  STM_I2C_REG_SR2    ((uint8_t)(0x18))	// 
-#define  STM_I2C_REG_CCR    ((uint8_t)(0x1C))	// 
-#define  STM_I2C_REG_TRISE  ((uint8_t)(0x20))	// 
-#define  STM_I2C_REG_FLTR   ((uint8_t)(0x24))	// 
+#define  STM_I2C_REG_CR1            ((uint8_t)(0x00))	// 
+#define  STM_I2C_REG_CR2            ((uint8_t)(0x04))	// 
+#define  STM_I2C_REG_OAR1           ((uint8_t)(0x08))	// 
+#define  STM_I2C_REG_OAR2           ((uint8_t)(0x0C))	// 
+#define  STM_I2C_REG_DR             ((uint8_t)(0x10))	// 
+#define  STM_I2C_REG_SR1            ((uint8_t)(0x14))	// 
+#define  STM_I2C_REG_SR2            ((uint8_t)(0x18))	// 
+#define  STM_I2C_REG_CCR            ((uint8_t)(0x1C))	// 
+#define  STM_I2C_REG_TRISE          ((uint8_t)(0x20))	// 
+#define  STM_I2C_REG_FLTR           ((uint8_t)(0x24))	// 
 
 /**************************************************************************
     ACCELEROMETER REGISTERS DEFAULT VALUES
 **************************************************************************/
-#define  STM_I2C_REG_CR1_DEF    ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_CR2_DEF    ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_OAR1_DEF   ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_OAR2_DEF   ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_DR_DEF     ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_SR1_DEF    ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_SR2_DEF    ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_CCR_DEF    ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_TRISE_DEF  ((uint32_t)(0x00))	// 
-#define  STM_I2C_REG_FLTR_DEF   ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_CR1_DEF        ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_CR2_DEF        ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_OAR1_DEF       ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_OAR2_DEF       ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_DR_DEF         ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_SR1_DEF        ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_SR2_DEF        ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_CCR_DEF        ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_TRISE_DEF      ((uint32_t)(0x00))	// 
+#define  STM_I2C_REG_FLTR_DEF       ((uint32_t)(0x00))	// 
 
 /**************************************************************************
     REGISTERS BIT
 **************************************************************************/
 #define  STM_I2C_SWRST_BIT          (uint32_t)BIT(15)
-#define  STM32F4xx_I2C_CR1_RE2      (uint32_t)BIT(14)
+#define  STM_I2C_CR1_RE2            (uint32_t)BIT(14)
 #define  STM_I2C_ALERT_BIT          (uint32_t)BIT(13)
 #define  STM_I2C_PEC_BIT            (uint32_t)BIT(12)
 #define  STM_I2C_POS_BIT            (uint32_t)BIT(11)
@@ -76,7 +76,7 @@
 #define  STM_I2C_ENPEC_BIT          (uint32_t)BIT(5)
 #define  STM_I2C_ENARP_BIT          (uint32_t)BIT(4)
 #define  STM_I2C_SMBTYPE_BIT        (uint32_t)BIT(3)
-#define  STM32F4xx_I2C_CR1_RE1      (uint32_t)BIT(2)
+#define  STM_I2C_CR1_RE1            (uint32_t)BIT(2)
 #define  STM_I2C_SMBUS_BIT          (uint32_t)BIT(1)
 #define  STM_I2C_PE_BIT             (uint32_t)BIT(0)
 
@@ -99,7 +99,7 @@
 
 #define STM_I2C_SMBALERT_BIT        (uint32_t)BIT(15) 
 #define STM_I2C_TIMEOUT_BIT         (uint32_t)BIT(14)
-#define STM32F4xx_I2C_SR1_RE2       (uint32_t)BIT(13)
+#define STM_I2C_SR1_RE2             (uint32_t)BIT(13)
 #define STM_I2C_PECERR_BIT          (uint32_t)BIT(12)
 #define STM_I2C_OVR_BIT             (uint32_t)BIT(11)
 #define STM_I2C_AF_BIT              (uint32_t)BIT(10)
@@ -107,7 +107,7 @@
 #define STM_I2C_BERR_BIT            (uint32_t)BIT(8)
 #define STM_I2C_TXE_BIT             (uint32_t)BIT(7)
 #define STM_I2C_RXNE_BIT            (uint32_t)BIT(6)
-#define STM32F4xx_I2C_SR1_RES1      (uint32_t)BIT(5)
+#define STM_I2C_SR1_RES1            (uint32_t)BIT(5)
 #define STM_I2C_STOPF_BIT           (uint32_t)BIT(4)
 #define STM_I2C_ADD10_BIT           (uint32_t)BIT(3)
 #define STM_I2C_BTF_BIT             (uint32_t)BIT(2)
@@ -132,14 +132,30 @@
 #define STM_I2C_ANOFF_BIT           (uint32_t)BIT(5) 
 #define STM_I2C_DNF_BITS            (uint32_t)0x0F          
 
+
 /**************************************************************************
-    DEVICE STRUCTURES AND QOM DECLARATION
+                        QOM DECLARATION
 **************************************************************************/
 /* Declaration of the QOM for the I2C of the stm32f4xx */
 #define TYPE_STM32F4XX_I2C "stm32f4xx-i2c"
 OBJECT_DECLARE_SIMPLE_TYPE(STM32F4XXI2CState, STM32F4XX_I2C)
 
-/* I2C state machine */
+
+/**************************************************************************
+                        FSM DECLARATIONS
+**************************************************************************/
+typedef struct fsm_trans_s
+{
+	int org_st;           	        // State of origin 
+	fsm_condition_func_t condition; // Transition Condition
+	int dst_st;				        // Destination state
+	fsm_output_func_t output;	    // Output generated by the transition
+}fsm_trans_t;
+
+typedef bool (*fsm_condition_func_t)(STM32F4XXI2CState*);
+typedef void (*fsm_output_func_t)(STM32F4XXI2CState*);
+
+/* I2C states */
 typedef enum states_e
 {
     STM32F4XX_I2C_DISABLED,
@@ -151,16 +167,27 @@ typedef enum states_e
     STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,
     STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE,
     STM32F4XX_I2C_RECEIVING_3BYTES,
-    STM32F4XX_I2C_RECEIVING_N_BYTES,
+    STM32F4XX_I2C_RECEIVING_NBYTES,
     STM32F4XX_I2C_TRANSMITTING,
-    //STM32F4xx_I2C_STATE_RECEIVING,            // In receiver mode, receiving data
-    //STM32F4xx_I2C_STATE_TRANSMITTING,         // In transmitter mode, sending data
-}states_t;
+};
+
+enum operation_e
+{
+    ops_na = 0, // No operation
+    ops_w = 1,  // Write
+    ops_r = 2,  // Read    
+};
+
+/**************************************************************************
+                        DEVICE STRUCTURES
+**************************************************************************/
 
 typedef struct flags_s
 {
     bool flg_sb;
+    bool flg_start;
     bool flg_stop;
+    bool flg_swrst;
     bool flg_addr;
 }flags_t;
 
@@ -177,11 +204,17 @@ typedef struct STM32F4XXI2CState
     qemu_irq irq_error;
 
     char *bus_name;
-    states_t state;
     flags_t flags;
 
     uint8_t slv_address;
 
+    /* fsm */
+	int8_t act_st;		// Actual fsm state 
+  	fsm_trans_t *table; // Transition table
+    int8_t ops;
+    uint8_t addr;
+
+   /* Registers*/ 
     uint32_t i2c_cr1;
     uint32_t i2c_cr2;
     uint32_t i2c_oar1;
@@ -192,8 +225,6 @@ typedef struct STM32F4XXI2CState
     uint32_t i2c_ccr;
     uint32_t i2c_trise;
     uint32_t i2c_fltr;
-
-    uint32_t* i2c_buffer;
 
 }STM32F4XXI2CState;
 
