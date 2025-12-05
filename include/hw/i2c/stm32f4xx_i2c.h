@@ -144,10 +144,11 @@ OBJECT_DECLARE_SIMPLE_TYPE(STM32F4XXI2CState, STM32F4XX_I2C)
 /**************************************************************************
                         FSM DECLARATIONS
 **************************************************************************/
+/* I2C fsm outputs & transitions*/
 typedef bool (*stm32f4xx_i2c_fsm_condition_func_t)(STM32F4XXI2CState*);
 typedef void (*stm32f4xx_i2c_fsm_output_func_t)(STM32F4XXI2CState*);
 
-/* I2C states */
+/* I2C fsm states */
 typedef enum stm32f4xx_i2c_fsm_state_e
 {
     STM32F4XX_I2C_DISABLED,
@@ -163,6 +164,7 @@ typedef enum stm32f4xx_i2c_fsm_state_e
     STM32F4XX_I2C_TRANSMITTING,
 }stm32f4xx_i2c_fsm_state_t;
 
+/* I2C fsm */
 typedef struct stm32f4xx_i2c_fsm_trans_s
 {
 	stm32f4xx_i2c_fsm_state_t           org_st;     // State of origin 
