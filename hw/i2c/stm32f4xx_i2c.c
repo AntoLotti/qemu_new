@@ -225,8 +225,9 @@ static bool stm32f4xx_i2c_fsm_condition_IDLE_to_START(STM32F4XXI2CState* src)
 {
     bool ret = (src->ops == ops_w) &&
         (src->addr == STM_I2C_REG_CR1) &&
-        (src->flags.flg_start) &&
-        ((src->i2c_cr1 & STM_I2C_ACK_BIT) != 0 );
+        (src->flags.flg_start);
+        //(src->flags.flg_start) &&
+        //((src->i2c_cr1 & STM_I2C_ACK_BIT) != 0 );
 
     STM32_DEBUG("IDLE to START condition: %s", ret ? "TRUE" : "FALSE");
 
@@ -285,7 +286,6 @@ static bool stm32f4xx_i2c_fsm_condition_TRANS_to_IDLE(STM32F4XXI2CState *src)
         (src->flags.flg_stop)
     );
 }
-
 
 static bool stm32f4xx_i2c_fsm_condition_START_to_S_READ(STM32F4XXI2CState* src)
 {
@@ -351,7 +351,6 @@ static bool stm32f4xx_i2c_fsm_condition_S_READ_to_R_NB(STM32F4XXI2CState* src)
     );
 }
 
-
 static bool stm32f4xx_i2c_fsm_condition_R_2BF_to_R_2BS(STM32F4XXI2CState* src)
 {
     return
@@ -362,7 +361,6 @@ static bool stm32f4xx_i2c_fsm_condition_R_2BF_to_R_2BS(STM32F4XXI2CState* src)
     );
 }
 
-
 static bool stm32f4xx_i2c_fsm_condition_R_3B_to_R_2BF(STM32F4XXI2CState* src)
 {
     return
@@ -372,7 +370,6 @@ static bool stm32f4xx_i2c_fsm_condition_R_3B_to_R_2BF(STM32F4XXI2CState* src)
         (src->flags.flg_stop)
     );
 }
-
 
 static bool stm32f4xx_i2c_fsm_condition_R_NB_to_R_NB(STM32F4XXI2CState* src)
 {
@@ -406,7 +403,6 @@ static bool stm32f4xx_i2c_fsm_condition_R_NB_to_R_2BF(STM32F4XXI2CState* src)
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0)
     );
 }
-
 
 static bool stm32f4xx_i2c_fsm_condition_R_1B_to_IDLE(STM32F4XXI2CState *src)
 {
@@ -443,7 +439,7 @@ static void stm32f4xx_i2c_begin_communication(STM32F4XXI2CState *src)
     if ( i2c_start_transfer( src->bus, address, is_recv ) )
     {
         STM32_DEBUG("Error during i2c_start_transfer \n");
-        src->i2c_sr1 |= STM_I2C_AF_BIT;  /* Set Acknowledge Failure flag */
+        src->i2c_sr1 |= STM_I2C_AF_BIT;
         return;
     }
 
@@ -455,7 +451,6 @@ static void stm32f4xx_i2c_begin_communication(STM32F4XXI2CState *src)
 
     src->i2c_sr2 = 
     ( (is_recv == 1) ? (src->i2c_sr2 & ~STM_I2C_TRA_BIT) : (src->i2c_sr2 | STM_I2C_TRA_BIT) );
-//    ( (is_recv == 0) ? (src->i2c_sr2 & ~STM_I2C_TRA_BIT) : (src->i2c_sr2 | STM_I2C_TRA_BIT) );
 
     src->i2c_sr1 |= STM_I2C_ADDR_BIT;
     src->i2c_dr   = 0U;
@@ -465,14 +460,12 @@ static void stm32f4xx_i2c_begin_communication(STM32F4XXI2CState *src)
         STM32_DEBUG("\n STM32F4XX_I2C_SENT_WRITE \n");
         src->i2c_sr1 |= STM_I2C_TXE_BIT;
         src->i2c_sr1 |= STM_I2C_BTF_BIT;
-        //src->act_st = STM32F4XX_I2C_SENT_WRITE;
     }
     else if ( is_recv == 1 )    
     {
         STM32_DEBUG("\n STM32F4XX_I2C_SENT_READ \n");        
         src->i2c_sr1 |= STM_I2C_RXNE_BIT;
         src->i2c_sr1 |= STM_I2C_BTF_BIT;
-        //src->act_st = STM32F4XX_I2C_SENT_READ;
     }
 }
 
@@ -575,31 +568,23 @@ static void stm32f4xx_i2c_fsm_output_TRANS_to_START(STM32F4XXI2CState* src)
 
 stm32f4xx_i2c_fsm_trans_t stm32f4xx_i2c_fsm_transition_table[TRANSITIONS]= 
 {
-    { STM32F4XX_I2C_DISABLED,       stm32f4xx_i2c_fsm_condition_DISABLED_to_IDLE,   STM32F4XX_I2C_IDLE,         stm32f4xx_i2c_fsm_output_DISABLED_to_IDLE   },
-
-    { STM32F4XX_I2C_IDLE,           stm32f4xx_i2c_fsm_condition_IDLE_to_START,      STM32F4XX_I2C_START,        stm32f4xx_i2c_fsm_output_IDLE_to_START      },
-    { STM32F4XX_I2C_START,          stm32f4xx_i2c_fsm_condition_START_to_S_WRITE,   STM32F4XX_I2C_SENT_WRITE,   stm32f4xx_i2c_begin_communication           },
-    { STM32F4XX_I2C_SENT_WRITE,     stm32f4xx_i2c_fsm_condition_S_WRITE_to_TRANS,   STM32F4XX_I2C_TRANSMITTING, stm32f4xx_i2c_data_transfer                 },
-    { STM32F4XX_I2C_TRANSMITTING,   stm32f4xx_i2c_fsm_condition_TRANS_to_TRANS,     STM32F4XX_I2C_TRANSMITTING, stm32f4xx_i2c_data_transfer                 },
-    { STM32F4XX_I2C_TRANSMITTING,   stm32f4xx_i2c_fsm_condition_TRANS_to_START,     STM32F4XX_I2C_START,        stm32f4xx_i2c_fsm_output_TRANS_to_START     },
-    { STM32F4XX_I2C_TRANSMITTING,   stm32f4xx_i2c_fsm_condition_TRANS_to_IDLE,      STM32F4XX_I2C_IDLE,         stm32f4xx_i2c_stop_generation               },
-
-
+    { STM32F4XX_I2C_DISABLED,                       stm32f4xx_i2c_fsm_condition_DISABLED_to_IDLE,   STM32F4XX_I2C_IDLE,                         stm32f4xx_i2c_fsm_output_DISABLED_to_IDLE   },
+    { STM32F4XX_I2C_IDLE,                           stm32f4xx_i2c_fsm_condition_IDLE_to_START,      STM32F4XX_I2C_START,                        stm32f4xx_i2c_fsm_output_IDLE_to_START      },
+    { STM32F4XX_I2C_START,                          stm32f4xx_i2c_fsm_condition_START_to_S_WRITE,   STM32F4XX_I2C_SENT_WRITE,                   stm32f4xx_i2c_begin_communication           },
+    { STM32F4XX_I2C_SENT_WRITE,                     stm32f4xx_i2c_fsm_condition_S_WRITE_to_TRANS,   STM32F4XX_I2C_TRANSMITTING,                 stm32f4xx_i2c_data_transfer                 },
+    { STM32F4XX_I2C_TRANSMITTING,                   stm32f4xx_i2c_fsm_condition_TRANS_to_TRANS,     STM32F4XX_I2C_TRANSMITTING,                 stm32f4xx_i2c_data_transfer                 },
+    { STM32F4XX_I2C_TRANSMITTING,                   stm32f4xx_i2c_fsm_condition_TRANS_to_START,     STM32F4XX_I2C_START,                        stm32f4xx_i2c_fsm_output_TRANS_to_START     },
+    { STM32F4XX_I2C_TRANSMITTING,                   stm32f4xx_i2c_fsm_condition_TRANS_to_IDLE,      STM32F4XX_I2C_IDLE,                         stm32f4xx_i2c_stop_generation               },
     { STM32F4XX_I2C_START,                          stm32f4xx_i2c_fsm_condition_START_to_S_READ,    STM32F4XX_I2C_SENT_READ,                    stm32f4xx_i2c_begin_communication   },
-    
     { STM32F4XX_I2C_SENT_READ,                      stm32f4xx_i2c_fsm_condition_S_READ_to_R_1B,     STM32F4XX_I2C_RECEIVING_1BYTE,              stm32f4xx_i2c_last_data_reception   },
     { STM32F4XX_I2C_SENT_READ,                      stm32f4xx_i2c_fsm_condition_S_READ_to_R_2BF,    STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,  stm32f4xx_i2c_data_reception        },
     { STM32F4XX_I2C_SENT_READ,                      stm32f4xx_i2c_fsm_condition_S_READ_to_R_3B,     STM32F4XX_I2C_RECEIVING_3BYTES,             stm32f4xx_i2c_data_reception        },
     { STM32F4XX_I2C_SENT_READ,                      stm32f4xx_i2c_fsm_condition_S_READ_to_R_NB,     STM32F4XX_I2C_RECEIVING_NBYTES,             stm32f4xx_i2c_data_reception        },
-    
-    { STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,    stm32f4xx_i2c_fsm_condition_R_2BF_to_R_2BS,     STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE, stm32f4xx_i2c_data_reception        },
-    
-    { STM32F4XX_I2C_RECEIVING_3BYTES,               stm32f4xx_i2c_fsm_condition_R_3B_to_R_2BF,      STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,  stm32f4xx_i2c_last_data_reception   },
-    
+    { STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,    stm32f4xx_i2c_fsm_condition_R_2BF_to_R_2BS,     STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE, stm32f4xx_i2c_last_data_reception   },    
+    { STM32F4XX_I2C_RECEIVING_3BYTES,               stm32f4xx_i2c_fsm_condition_R_3B_to_R_2BF,      STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,  stm32f4xx_i2c_data_reception        },
     { STM32F4XX_I2C_RECEIVING_NBYTES,               stm32f4xx_i2c_fsm_condition_R_NB_to_R_NB,       STM32F4XX_I2C_RECEIVING_NBYTES,             stm32f4xx_i2c_data_reception        },
     { STM32F4XX_I2C_RECEIVING_NBYTES,               stm32f4xx_i2c_fsm_condition_R_NB_to_R_3B,       STM32F4XX_I2C_RECEIVING_3BYTES,             stm32f4xx_i2c_data_reception        },
     { STM32F4XX_I2C_RECEIVING_NBYTES,               stm32f4xx_i2c_fsm_condition_R_NB_to_R_2BF,      STM32F4XX_I2C_RECEIVING_2BYTES_FIRST_BYTE,  stm32f4xx_i2c_data_reception        },
-    
     { STM32F4XX_I2C_RECEIVING_1BYTE,                stm32f4xx_i2c_fsm_condition_R_1B_to_IDLE,       STM32F4XX_I2C_IDLE,                         stm32f4xx_i2c_stop_generation       },
     { STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE,   stm32f4xx_i2c_fsm_condition_R_2BS_to_IDLE,      STM32F4XX_I2C_IDLE,                         stm32f4xx_i2c_stop_generation       },
 
@@ -723,6 +708,8 @@ static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
 
     s->i2c_cr1 = (uint32_t)value;
 
+    /* Launch FSM */
+    stm32f4xx_i2c_fsm_fire(s);
 }
 
 
@@ -741,6 +728,9 @@ static uint64_t __i2c_read_dr(STM32F4XXI2CState *s)
     // Handling RXNE Bit Cleaning
     stm32f4xx_i2c_clear_status_flag(s, STM_I2C_RXNE_BIT);
     
+    /* Launch FSM */
+    stm32f4xx_i2c_fsm_fire(s);
+
     return (uint64_t)(s->i2c_dr);
 }
 
@@ -760,6 +750,9 @@ static void __i2c_write_dr(STM32F4XXI2CState *s, uint64_t value)
         s->flags.flg_sb = false;
         stm32f4xx_i2c_clear_status_flag(s, STM_I2C_SB_BIT);
     }
+
+    /* Launch FSM */
+    stm32f4xx_i2c_fsm_fire(s);
 }
 
 
@@ -826,20 +819,8 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
 
     STM32_DEBUG("Value readed: 0x%02x", (uint32_t)result);
 
-    if( (s->fsm->act_st == STM32F4XX_I2C_RECEIVING_1BYTE && s->flags.flg_stop)
-        || (s->fsm->act_st == STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE && s->flags.flg_stop)
-    )
-    {
-        s->ops = ops_r;
-        s->addr = addr;
-        stm32f4xx_i2c_fsm_fire(s);
-    }
-    else
-    {
-        s->ops = ops_na;
-        s->addr = 0xFF;
-    }
-
+    s->ops = ops_na;
+    s->addr = 0xFF;
 
     return result;
 }
@@ -855,37 +836,23 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 
     switch (addr) 
     {
-        case STM_I2C_REG_CR1:   __i2c_write_cr1(s, value);        break;
-        case STM_I2C_REG_CR2:   __i2c_write_cr2(s, value);        break;
+        case STM_I2C_REG_CR1:   __i2c_write_cr1(s, value);      break;
+        case STM_I2C_REG_CR2:   __i2c_write_cr2(s, value);      break;
         case STM_I2C_REG_OAR1:  s->i2c_oar1 = (uint32_t)value;  break;
         case STM_I2C_REG_OAR2:  s->i2c_oar2 = (uint32_t)value;  break;
-        case STM_I2C_REG_DR:    __i2c_write_dr(s, value);         break;
+        case STM_I2C_REG_DR:    __i2c_write_dr(s, value);       break;
         case STM_I2C_REG_SR1:   s->i2c_sr1  = (uint32_t)value;  break;
-        case STM_I2C_REG_SR2:
-            /* SR2 is generally read-only */
-            break;
-        case STM_I2C_REG_CCR:   s->i2c_ccr      = (uint32_t)value;  break;
-        case STM_I2C_REG_TRISE: s->i2c_trise    = (uint32_t)value;  break;
-        case STM_I2C_REG_FLTR:  s->i2c_fltr     = (uint32_t)value;  break;
+        case STM_I2C_REG_SR2:                                   break;
+        case STM_I2C_REG_CCR:   s->i2c_ccr  = (uint32_t)value;  break;
+        case STM_I2C_REG_TRISE: s->i2c_trise = (uint32_t)value; break;
+        case STM_I2C_REG_FLTR:  s->i2c_fltr = (uint32_t)value;  break;
         default:
             qemu_log_mask(LOG_GUEST_ERROR, "STM32 I2C: Bad write offset 0x%lx\n", addr);
     }
 
-    if( addr == STM_I2C_REG_DR 
-        || addr == STM_I2C_REG_CR1 
-        || (s->fsm->act_st == STM32F4XX_I2C_RECEIVING_1BYTE && s->flags.flg_stop)
-        || (s->fsm->act_st == STM32F4XX_I2C_RECEIVING_2BYTES_SECOND_BYTE && s->flags.flg_stop)
-    )
-    {
-        s->ops = ops_w;
-        s->addr = addr;
-        stm32f4xx_i2c_fsm_fire(s);
-    }
-    else
-    {
-        s->ops = ops_na;
-        s->addr = 0xFF;
-    }
+    s->ops = ops_na;
+    s->addr = 0xFF;
+
 }
 
 
