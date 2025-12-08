@@ -15,6 +15,18 @@
 /**************************************************************************
     ACCELEROMETER DATA GENERATION
 **************************************************************************/
+static LIS3DH_FullScale_t lis3dh_get_current_fs(LIS3DHState *src)
+{
+    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
+
+    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
+
+    if ( !( temp > LIS3DH_FS_16G) )
+        fs = temp;
+
+    return fs;
+}
+
 static LIS3DH_Mode_t lis3dh_get_operating_mode(LIS3DHState *src)
 {
     LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
@@ -29,16 +41,14 @@ static LIS3DH_Mode_t lis3dh_get_operating_mode(LIS3DHState *src)
     return mode;
 }
 
-static LIS3DH_FullScale_t lis3dh_get_current_fs(LIS3DHState *src)
+static LIS3DH_ODR_t lis3dh_get_ODR_mode(LIS3DHState *src)
 {
-    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
+    LIS3DH_ODR_t mode = (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BITS_ODR) >> 4;
+    
+    if( mode < LIS3DH_ODR_POWER_DOWN || mode > LIS3DH_ODR_OTHER )
+        mode = LIS3DH_ODR_POWER_DOWN; 
 
-    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
-
-    if ( !( temp > LIS3DH_FS_16G) )
-        fs = temp;
-
-    return fs;
+    return mode;
 }
 
 
@@ -97,14 +107,14 @@ static int64_t lis3dh_temp_get_data_from_reg(LIS3DHState *src)
     return temp;
 }
 
-static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_axis_l )
+static void lis3dh_acc_data_transf(LIS3DHState *src, float data)
 {
     /**
     *   TODO: develop each lis3dh mode
     *   - NOW only high resolution mode with a FS of +- 2g
     */
 
-    float data_with_So = src / ( 0.001f );   // -1,023(g) / 0.001(g/LSB) = -1023 LSB 
+    float data_with_So = data / ( 0.001f );   // -1,023(g) / 0.001(g/LSB) = -1023 LSB 
 
     /**
      * TODO: check the max value of each modes
@@ -117,25 +127,24 @@ static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_
 
     int16_t data_in_16b = 0x00;
 
-    if ( fabsf(src - (int)src) >= 0.5f )
-        data_in_16b = (int16_t)src + (is_pos ? 1 : -1); 
+    if ( fabsf(data_with_So - (int)data_with_So) >= 0.5f )
+        data_in_16b = (int16_t)data_with_So + (is_pos ? 1 : -1); 
     else
-        data_in_16b = (int16_t)src;
-
+        data_in_16b = (int16_t)data_with_So;
         
     /**
     * TODO: change the shift depending of the mode
     * - now High resolution mode (12 bits) --> 4 bits shift
     */
     
-    int16_t x_raw_data = data_in_16b << 4; // 1111 1100 0000 0001 --> 1100 0000 0001 0000
+    int16_t x_raw_data = data_in_16b << 4;  // 1111 1100 0000 0001 --> 1100 0000 0001 0000
     printf("\n\n x_raw_data: 0x%x \n\n", x_raw_data);
     
     // Split Data Into Registers //
-    *out_axis_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
-    printf("\n\n out_x_h: 0x%x \n\n",*out_axis_h);
-    *out_axis_l = (uint8_t)(x_raw_data & 0x00FF);          // 0001 0000 = 0x10
-    printf("\n\n out_x_l: 0x%x \n\n",*out_axis_l);
+    src->out_x_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
+    printf("\n\n out_x_h: 0x%x \n\n", src->out_x_h);
+    src->out_x_l = (uint8_t)(x_raw_data & 0x00FF);          // 0001 0000 = 0x10
+    printf("\n\n out_x_l: 0x%x \n\n", src->out_x_l);
 
 }
 
@@ -149,7 +158,7 @@ static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *
     // Data Generation In g //
     visit_type_int(v, name, &value, errp);
 
-    __data_transformation( (value * 1.0), &s->out_x_h, &s->out_x_l );
+    lis3dh_acc_data_transf(s, (value * 1.0));
 }
 
 static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
@@ -161,7 +170,7 @@ static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *
     // Data Generation In g //
     visit_type_int(v, name, &value, errp);
 
-    __data_transformation( (value * 1.0), &s->out_y_h, &s->out_y_l );
+    lis3dh_acc_data_transf(s, (value * 1.0));
 }
 
 static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
@@ -173,7 +182,7 @@ static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *
     // Data Generation In g //
     visit_type_int(v, name, &value, errp);
 
-    __data_transformation( (value * 1.0), &s->out_z_h, &s->out_z_l );
+    lis3dh_acc_data_transf(s, (value * 1.0));
 }
 
 
@@ -353,7 +362,7 @@ static void lis3dh_unrealize(DeviceState *dev)
     timer_free(lis3dh->timer);
 }
 
-static bool __reserved_address( uint8_t src)
+static bool lis3dh_check_if_address_reserved( uint8_t src)
 {
     if ( src == 0x0E )
             return true;
@@ -375,7 +384,7 @@ static bool __reserved_address( uint8_t src)
 
 static bool lis3dh_write_in_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
 {
-    if ( __reserved_address(dir) ) //#TODO print error message
+    if ( lis3dh_check_if_address_reserved(dir) ) //#TODO print error message
         return false;
     
     switch (dir)

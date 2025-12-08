@@ -160,10 +160,7 @@
 #define LIS3DH_TEMP_CFG_BIT_REG_ADC_EN      (uint8_t)BIT(7)
 #define LIS3DH_TEMP_CFG_BIT_REG_TEMP_EN     (uint8_t)BIT(6)
 
-#define LIS3DH_CTRL_REG1_BIT_ODR3           (uint8_t)BIT(7)
-#define LIS3DH_CTRL_REG1_BIT_ODR2           (uint8_t)BIT(6)
-#define LIS3DH_CTRL_REG1_BIT_ODR1           (uint8_t)BIT(5)
-#define LIS3DH_CTRL_REG1_BIT_ODR0           (uint8_t)BIT(4)
+#define LIS3DH_CTRL_REG1_BITS_ODR           (uint8_t)(0xF0)
 #define LIS3DH_CTRL_REG1_BIT_LPEN           (uint8_t)BIT(3)
 #define LIS3DH_CTRL_REG1_BIT_ZEN            (uint8_t)BIT(2)
 #define LIS3DH_CTRL_REG1_BIT_YEN            (uint8_t)BIT(1)
@@ -260,6 +257,20 @@ typedef enum LIS3DH_Mode_e
     LIS3DH_MODE_LOW_POWER   = 2,
     LIS3DH_MODE_NOT_ALLOWED = 3,
 }LIS3DH_Mode_t;
+
+typedef enum LIS3DH_ODR_e
+{
+    LIS3DH_ODR_POWER_DOWN   = 0,
+    LIS3DH_ODR_1HZ          = 1,
+    LIS3DH_ODR_10HZ         = 2,
+    LIS3DH_ODR_25HZ         = 3,
+    LIS3DH_ODR_50HZ         = 4,
+    LIS3DH_ODR_100HZ        = 5,
+    LIS3DH_ODR_200HZ        = 6,
+    LIS3DH_ODR_400HZ        = 7,
+    LIS3DH_ODR_1_60HZ       = 8,
+    LIS3DH_ODR_OTHER        = 9,
+}LIS3DH_ODR_t;
 
 /**************************************************************************
     PRIVET MACROS
