@@ -39,12 +39,67 @@ static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
 static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
 
-//static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
-//static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
+static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp);
 
 /**************************************************************************
     ACCELEROMETER DATA GENERATION
 **************************************************************************/
+static bool lis3dh_temp_condition_enable(LIS3DHState *src)
+{
+    return
+    (
+        (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_BDU) != 0 
+        && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_ADC_EN) != 0
+        && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_TEMP_EN) != 0
+    );
+}
+
+static void lis3dh_temp_set_data_in_reg(LIS3DHState *src, uint64_t data)
+{
+    /** 
+     * intput -40ºC;
+     * value = -40 
+     * Value = 0xFFFF FFFF FFFF FFD8 
+     * value = 1 ...... 11111111 11011000  
+     */
+
+    /* I assume a factory calibration point of 25ºC for an output of 0 */
+    /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
+
+    /**
+     * TODO: check the max value
+     */
+
+    int16_t raw = (int16_t)((data*1.0) - 25.0f); // = (-40.0) - 25.0 = -65.0ºC = 1111 1111  1011 1111
+
+
+    /* raw * 1 LSB/ºC = raw */
+    /**
+     * Because output of 10bits and left justified
+     * raw << 6 = 1111 1111  1011 1111 << 6 =  1110 1111 11000  
+     */
+
+    raw = raw << 6;
+
+    src->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8); 
+    src->adc_3_l = (uint8_t)(raw & 0x00FF);
+}
+
+static int64_t lis3dh_temp_get_data_from_reg(LIS3DHState *src)
+{
+
+    int16_t raw =  (((int16_t)src->adc_3_h << 8) | (src->adc_3_l)) >> 6;
+
+    /* I assume a factory calibration point of 25ºC for an output of 0 */
+    /* The TSDr is 1 digit/ºC = 1 LSB/ºC */
+
+    int64_t temp = 25 + ((raw*1.0f)/1);
+
+    return temp;
+}
+
+
 static int16_t __float_to_int16(float src)
 {
     bool is_pos = true;
@@ -157,6 +212,41 @@ static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *
 
     int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
     int64_t value = raw >> 4;
+
+    visit_type_int(v, name, &value, errp);
+}
+
+
+static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH(obj);
+    
+    int64_t value = 0L;
+    if(lis3dh_temp_condition_enable(s))
+    {
+        /** 
+         * intput -40ºC;
+         * value = -40 
+         * Value = 0xFFFF FFFF FFFF FFD8 
+         * value = 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11011000  
+         */
+        visit_type_int(v, name, &value, errp);
+    }
+    else
+    {
+
+    }
+
+}
+
+static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
+{
+    LIS3DHState *s = LIS3DH(obj);
+
+    if(lis3dh_temp_condition_enable(s))
+    {
+
+    }    
 
     visit_type_int(v, name, &value, errp);
 }
@@ -524,7 +614,6 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
     LIS3DH REGISTRATION IN QEMU 
 **************************************************************************/
 
-// Example for your LIS3DH
 static void lis3dh_initfn(Object *obj)
 {
     object_property_add(obj, "accel-x", "int",
