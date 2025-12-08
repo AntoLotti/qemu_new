@@ -12,12 +12,36 @@
 #include "migration/vmstate.h"
 #include <math.h>
 
-static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src);
-static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src);
-
 /**************************************************************************
     ACCELEROMETER DATA GENERATION
 **************************************************************************/
+static LIS3DH_Mode_t lis3dh_get_operating_mode(LIS3DHState *src)
+{
+    LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
+
+    uint8_t temp =  
+        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
+        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
+
+    if ( !( temp >= LIS3DH_MODE_NOT_ALLOWED) )
+        mode = temp;
+
+    return mode;
+}
+
+static LIS3DH_FullScale_t lis3dh_get_current_fs(LIS3DHState *src)
+{
+    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
+
+    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
+
+    if ( !( temp > LIS3DH_FS_16G) )
+        fs = temp;
+
+    return fs;
+}
+
+
 static bool lis3dh_temp_condition_enable(LIS3DHState *src)
 {
     return
@@ -27,6 +51,7 @@ static bool lis3dh_temp_condition_enable(LIS3DHState *src)
         && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_TEMP_EN) != 0
     );
 }
+
 
 static void lis3dh_temp_set_data_in_reg(LIS3DHState *src, uint64_t data)
 {
@@ -72,24 +97,6 @@ static int64_t lis3dh_temp_get_data_from_reg(LIS3DHState *src)
     return temp;
 }
 
-
-static int16_t __float_to_int16(float src)
-{
-    bool is_pos = true;
-
-    if ( src < 0 )
-        is_pos = false;
-
-    int16_t dst = 0x00;
-
-    if ( fabsf(src - (int)src) >= 0.5f )
-        dst = (int16_t)src + (is_pos ? 1 : -1); 
-    else
-        dst = (int16_t)src;
-
-    return dst;
-}
-
 static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_axis_l )
 {
     /**
@@ -103,8 +110,19 @@ static void __data_transformation( float src, uint8_t* out_axis_h, uint8_t* out_
      * TODO: check the max value of each modes
      */
 
-    int16_t data_in_16b = __float_to_int16( data_with_So ); // data_in_16b = 1111 1100 0000 0001
-    
+    bool is_pos = true;
+
+    if ( data_with_So < 0 )
+        is_pos = false;
+
+    int16_t data_in_16b = 0x00;
+
+    if ( fabsf(src - (int)src) >= 0.5f )
+        data_in_16b = (int16_t)src + (is_pos ? 1 : -1); 
+    else
+        data_in_16b = (int16_t)src;
+
+        
     /**
     * TODO: change the shift depending of the mode
     * - now High resolution mode (12 bits) --> 4 bits shift
@@ -333,32 +351,6 @@ static void lis3dh_unrealize(DeviceState *dev)
 
     timer_del(lis3dh->timer);
     timer_free(lis3dh->timer);
-}
-
-static LIS3DH_Mode_t __lis3dh_get_current_mode(LIS3DHState* src)
-{
-    LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
-
-    uint8_t temp =  
-        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
-        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
-
-    if ( !( temp >= LIS3DH_MODE_NOT_ALLOWED) )
-        mode = temp;
-
-    return mode;
-}
-
-static LIS3DH_FullScale_t __lis3dh_get_current_fs(LIS3DHState* src)
-{
-    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
-
-    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
-
-    if ( !( temp > LIS3DH_FS_16G) )
-        fs = temp;
-
-    return fs;
 }
 
 static bool __reserved_address( uint8_t src)
