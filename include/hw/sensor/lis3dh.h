@@ -293,13 +293,11 @@ typedef struct LIS3DHState
     /* Parent object */
     I2CSlave i2c;
 
-    /* Critical Fields */
     uint8_t address;       // 7-bit I2C address
 	uint8_t ptr;           // Current register pointer
 	bool auto_increment;   // Auto-advance pointer after access
-	//bool data_ready;       // Data ready flag
 	bool address_phase;    // I2C command phase tracker
-    QEMUTimer *timer;      // Data update timer
+//    QEMUTimer *timer;      // Data update timer
 
     /* Registers */
     // directions [0x00-0x06] reserved

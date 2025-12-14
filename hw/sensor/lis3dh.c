@@ -288,27 +288,6 @@ static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opa
 /**************************************************************************
     DEVICE LIFE FUNCTIONS
 **************************************************************************/
-static void lis3dh_timer_update_data(void *src)
-{
-    (void)src;
-    //LIS3DHState *lis3dh = src;
-    //
-    ///* Generate new accelerometer values */
-    //__acc_x_axis_data_generation( lis3dh->out_x_h, lis3dh->out_x_l );
-    //__acc_y_axis_data_generation( lis3dh->out_y_h, lis3dh->out_y_l );
-    //__acc_z_axis_data_generation( lis3dh->out_z_h, lis3dh->out_z_l );
-    //    
-    ///* Set data ready flag */
-    ////s->status_reg |= 0x08;  // Set DRDY bit
-    //
-    ///* Reschedule timer */
-    //timer_mod
-    //(
-    //    lis3dh->timer, 
-    //    qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
-    //);
-}
-
 static void lis3dh_reg_reset(LIS3DHState *lis3dh)
 {
     // directions [0x00-0x06] reserved
@@ -369,16 +348,15 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
     lis3dh->address         = LIS3DH_DEFAULT_ADDRESS;
 	lis3dh->ptr             = 0xFF;
 	lis3dh->auto_increment  = false;
-	//lis3dh->data_ready      = false;
 	lis3dh->address_phase   = false;
 
-    /* Create data update timer */
-    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_timer_update_data, lis3dh);
-    timer_mod
-    (
-        lis3dh->timer, 
-        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
-    ); // 100Hz update
+//    /* Create data update timer */
+//    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_timer_update_data, lis3dh);
+//    timer_mod
+//    (
+//        lis3dh->timer, 
+//        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
+//    ); // 100Hz update
     
     /* Reset registers */
     lis3dh_reg_reset(lis3dh);
@@ -390,10 +368,8 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
 
 static void lis3dh_unrealize(DeviceState *dev)
 {
-    LIS3DHState *lis3dh = LIS3DH(dev);
-
-    timer_del(lis3dh->timer);
-    timer_free(lis3dh->timer);
+    //LIS3DHState *lis3dh = LIS3DH(dev);
+    (void)dev;
 }
 
 static bool lis3dh_check_if_address_reserved( uint8_t src)
