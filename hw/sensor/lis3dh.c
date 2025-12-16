@@ -63,71 +63,6 @@
 //}
 
 
-static bool lis3dh_temp_condition_enable(LIS3DHState *src)
-{
-    return
-    (
-        (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_BDU) != 0 
-        && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_ADC_EN) != 0
-        && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_TEMP_EN) != 0
-    );
-}
-
-
-static void lis3dh_temp_set_data(LIS3DHState *src, int64_t data)
-{
-
-    if ( data < LIS3DH_TEMP_MIN || data > LIS3DH_TEMP_MAX )
-    {
-        return;
-        /**
-        * TODO:
-        * Error handler
-        */
-    }
-    
-    /** 
-     * intput -40ºC
-     * value = -40 
-     * Value = 0xFFFF FFFF FFFF FFD8 
-     * value = 1 ...... 1111 1111  1101 1000  
-     */
-
-    /* I assume a factory calibration point of 25ºC for an output of 0 */
-    /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
-    
-    /**
-     * data * 1 LSB/ºC
-     * raw = (-40.0) - 25.0 = -65.0ºC = 1111 1111  1011 1111
-     * Because output of 10bits and left justified
-     * raw << 6 = 1111 1111  1011 1111 << 6 =  1111 1110 1111 11000
-     */
-    
-    int16_t raw = ((int16_t)(data - 25)) << 6;
-    SENSOR_LIS3DH("temp raw << 6: 0x%02x", raw);
-
-    src->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8);
-    SENSOR_LIS3DH("temp, set, h: 0x%02x", src->adc_3_h);
-    src->adc_3_l = (uint8_t)(raw & 0x00FF);
-    SENSOR_LIS3DH("temp, set, l: 0x%02x", src->adc_3_l);
-}
-
-static int64_t lis3dh_temp_get_data(LIS3DHState *src)
-{
-
-    int16_t raw = ((int16_t)( ( (int16_t)src->adc_3_h << 8 ) | src->adc_3_h ) >> 6 );
-
-    /* I assume a factory calibration point of 25ºC for an output of 0 */
-    /* The TSDr is 1 digit/ºC = 1 LSB/ºC */
-    SENSOR_LIS3DH("temp, get, h: 0x%02x", src->adc_3_h);
-    SENSOR_LIS3DH("temp, get, l: 0x%02x", src->adc_3_l);
-    SENSOR_LIS3DH("temp, get, raw: %d", raw);
-
-    int64_t temp = 25 + (int64_t)((raw*1.0f)/1);
-
-    return temp;
-}
-
 static void lis3dh_acc_data_transf(LIS3DHState *src, float data, uint8_t mode)
 {
     /**
@@ -187,7 +122,6 @@ static void lis3dh_acc_data_transf(LIS3DHState *src, float data, uint8_t mode)
     
 }
 
-
 static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
 
@@ -224,7 +158,6 @@ static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *
     lis3dh_acc_data_transf(s, (value * 1.0), 3);
 }
 
-
 static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
@@ -255,6 +188,70 @@ static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *
     visit_type_int(v, name, &value, errp);
 }
 
+
+static bool lis3dh_temp_condition_enable(LIS3DHState *src)
+{
+    return
+    (
+        (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_BDU) != 0 
+        && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_ADC_EN) != 0
+        && (src->temp_cfg_reg & LIS3DH_TEMP_CFG_BIT_REG_TEMP_EN) != 0
+    );
+}
+
+static void lis3dh_temp_set_data(LIS3DHState *src, int64_t data)
+{
+
+    if ( data < LIS3DH_TEMP_MIN || data > LIS3DH_TEMP_MAX )
+    {
+        return;
+        /**
+        * TODO:
+        * Error handler
+        */
+    }
+    
+    /** 
+     * intput -40ºC
+     * value = -40 
+     * Value = 0xFFFF FFFF FFFF FFD8 
+     * value = 1 ...... 1111 1111  1101 1000  
+     */
+
+    /* I assume a factory calibration point of 25ºC for an output of 0 */
+    /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
+    
+    /**
+     * data * 1 LSB/ºC
+     * raw = (-40.0) - 25.0 = -65.0ºC = 1111 1111  1011 1111
+     * Because output of 10bits and left justified
+     * raw << 6 = 1111 1111  1011 1111 << 6 =  1111 1110 1111 11000
+     */
+    
+    int16_t raw = ((int16_t)(data - 25)) << 6;
+    SENSOR_LIS3DH("temp raw << 6: 0x%02x", raw);
+
+    src->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8);
+    SENSOR_LIS3DH("temp, set, h: 0x%02x", src->adc_3_h);
+    src->adc_3_l = (uint8_t)(raw & 0x00FF);
+    SENSOR_LIS3DH("temp, set, l: 0x%02x", src->adc_3_l);
+}
+
+static int64_t lis3dh_temp_get_data(LIS3DHState *src)
+{
+
+    int16_t raw = ((int16_t)( ( (int16_t)src->adc_3_h << 8 ) | src->adc_3_h ) >> 6 );
+
+    /* I assume a factory calibration point of 25ºC for an output of 0 */
+    /* The TSDr is 1 digit/ºC = 1 LSB/ºC */
+    SENSOR_LIS3DH("temp, get, h: 0x%02x", src->adc_3_h);
+    SENSOR_LIS3DH("temp, get, l: 0x%02x", src->adc_3_l);
+    SENSOR_LIS3DH("temp, get, raw: %d", raw);
+
+    int64_t temp = 25 + (int64_t)((raw*1.0f)/1);
+
+    return temp;
+}
 
 static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
@@ -290,82 +287,9 @@ static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opa
 }
 
 /**************************************************************************
-    DEVICE LIFE FUNCTIONS
+    I2C FUNCTIONS
 **************************************************************************/
-static void lis3dh_reg_reset(LIS3DHState *lis3dh)
-{
-    // directions [0x00-0x06] reserved
-    lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_AUX_DEF;    // Status Register
-    lis3dh->adc_1_l         = LIS3DH_ADC_1_L_DEF;           // 1-Axis Acceleration Data Low Register
-    lis3dh->adc_1_h         = LIS3DH_ADC_1_H_DEF;           // 1-Axis Acceleration Data High Register
-    lis3dh->adc_2_l         = LIS3DH_ADC_2_L_DEF;           // 2-Axis Acceleration Data Low Register
-    lis3dh->adc_2_h         = LIS3DH_ADC_2_H_DEF;           // 2-Axis Acceleration Data High Register
-    lis3dh->adc_3_l         = LIS3DH_ADC_3_L_DEF;           // 3-Axis Acceleration Data Low Register
-    lis3dh->adc_3_h         = LIS3DH_ADC_3_H_DEF;           // 3-Axis Acceleration Data High Register
-    // direction 0x0E reserved
-    lis3dh->who_am_i        = LIS3DH_WHO_AM_I_DEF;          // Device identification Register 
-    // directions [0x10-0x1D] reserved
-    lis3dh->ctrl_reg0       = LIS3DH_CTRL_REG0_DEF;         //
-    lis3dh->temp_cfg_reg    = LIS3DH_TEMP_CFG_REG_DEF;      // Temperature Sensor Register
-    lis3dh->ctrl_reg1       = LIS3DH_CTRL_REG1_DEF;         // Accelerometer Control Register 1
-    lis3dh->ctrl_reg2       = LIS3DH_CTRL_REG2_DEF;         // Accelerometer Control Register 2
-    lis3dh->ctrl_reg3       = LIS3DH_CTRL_REG3_DEF;         // Accelerometer Control Register 3
-    lis3dh->ctrl_reg4       = LIS3DH_CTRL_REG4_DEF;         // Accelerometer Control Register 4
-    lis3dh->ctrl_reg5       = LIS3DH_CTRL_REG5_DEF;         // Accelerometer Control Register 5
-    lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
-    lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
-    lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
-
-    lis3dh->out_x_l         = LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
-    lis3dh->out_x_h         = LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
-    lis3dh->out_y_l         = LIS3DH_OUT_Y_L_DEF;           // Y-Axis Acceleration Data Low Register
-    lis3dh->out_y_h         = LIS3DH_OUT_Y_H_DEF;           // Y-Axis Acceleration Data High Register
-    lis3dh->out_z_l         = LIS3DH_OUT_Z_L_DEF;           // Z-Axis Acceleration Data Low Register
-    lis3dh->out_z_h         = LIS3DH_OUT_Z_H_DEF;           // Z-Axis Acceleration Data High Register
-    
-    lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEF;     // FIFO Control Register
-    lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEF;      // FIFO Source Register
-    lis3dh->int1_cfg        = LIS3DH_INT1_CFG_DEF;          // Interrupt Configuration Register
-    lis3dh->int1_src        = LIS3DH_INT1_SRC_DEF;          // Interrupt Source Register
-    lis3dh->int1_ths        = LIS3DH_INT1_THS_DEF;          // Interrupt Threshold Register
-    lis3dh->int1_duration   = LIS3DH_INT1_DURATION_DEF;     // Interrupt Duration Register
-    lis3dh->int2_cfg        = LIS3DH_INT2_CFG_DEF;          //
-    lis3dh->int2_src        = LIS3DH_INT2_SRC_DEF;          //
-    lis3dh->int2_ths        = LIS3DH_INT2_THS_DEF;          //
-    lis3dh->int2_duration   = LIS3DH_INT2_DURATION_DEF;     //       
-    lis3dh->click_cfg       = LIS3DH_CLICK_CFG_DEF;         // Interrupt Click Recognition Register
-    lis3dh->click_src       = LIS3DH_CLICK_SRC_DEF;         // Interrupt Click Source Register
-    lis3dh->click_ths       = LIS3DH_CLICK_THS_DEF;         // Interrupt Click Threshold Register
-    lis3dh->time_limit      = LIS3DH_TIME_LIMIT_DEF;        // Click Time Limit Register
-    lis3dh->time_latency    = LIS3DH_TIME_LATENCY_DEF;      // Click Time Latency Register
-    lis3dh->time_window     = LIS3DH_TIME_WINDOW_DEF;       // Click Time Window Register
-    lis3dh->act_ths         = LIS3DH_ACT_THS_DEF;           //
-    lis3dh->act_dur         = LIS3DH_ACT_DUR_DEF;           //
-}
-
-static void lis3dh_realize(DeviceState *dev, Error **errp)
-{
-    printf("QEMU LIS3DH realize\n");
-    LIS3DHState *lis3dh = LIS3DH(dev);
-    
-    /* Initialize I2C state */
-    lis3dh->address         = LIS3DH_DEFAULT_ADDRESS;
-	lis3dh->ptr             = 0xFF;
-	lis3dh->auto_increment  = false;
-	lis3dh->address_phase   = false;
-   
-    /* Reset registers */
-    lis3dh_reg_reset(lis3dh);
-
-}
-
-static void lis3dh_unrealize(DeviceState *dev)
-{
-    //LIS3DHState *lis3dh = LIS3DH(dev);
-    (void)dev;
-}
-
-static bool lis3dh_check_if_address_reserved( uint8_t src)
+static bool lis3dh_address_reserved( uint8_t src)
 {
     if ( src == 0x0E )
         return true;
@@ -387,7 +311,7 @@ static bool lis3dh_check_if_address_reserved( uint8_t src)
 
 static bool lis3dh_write_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
 {
-    if ( lis3dh_check_if_address_reserved(dir) ) //#TODO print error message
+    if ( lis3dh_address_reserved(dir) ) //#TODO print error message
         return false;
     
     switch (dir)
@@ -506,9 +430,6 @@ static uint8_t lis3dh_read_register( LIS3DHState *src )
     return ret;
 }
 
-/**************************************************************************
-    I2C FUNCTIONS
-**************************************************************************/
 static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
 {
     LIS3DHState *lis3dh = LIS3DH(i2c);
@@ -580,6 +501,79 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 /**************************************************************************
     LIS3DH REGISTRATION IN QEMU 
 **************************************************************************/
+static void lis3dh_reset_registers(LIS3DHState *lis3dh)
+{
+    // directions [0x00-0x06] reserved
+    lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_AUX_DEF;    // Status Register
+    lis3dh->adc_1_l         = LIS3DH_ADC_1_L_DEF;           // 1-Axis Acceleration Data Low Register
+    lis3dh->adc_1_h         = LIS3DH_ADC_1_H_DEF;           // 1-Axis Acceleration Data High Register
+    lis3dh->adc_2_l         = LIS3DH_ADC_2_L_DEF;           // 2-Axis Acceleration Data Low Register
+    lis3dh->adc_2_h         = LIS3DH_ADC_2_H_DEF;           // 2-Axis Acceleration Data High Register
+    lis3dh->adc_3_l         = LIS3DH_ADC_3_L_DEF;           // 3-Axis Acceleration Data Low Register
+    lis3dh->adc_3_h         = LIS3DH_ADC_3_H_DEF;           // 3-Axis Acceleration Data High Register
+    // direction 0x0E reserved
+    lis3dh->who_am_i        = LIS3DH_WHO_AM_I_DEF;          // Device identification Register 
+    // directions [0x10-0x1D] reserved
+    lis3dh->ctrl_reg0       = LIS3DH_CTRL_REG0_DEF;         //
+    lis3dh->temp_cfg_reg    = LIS3DH_TEMP_CFG_REG_DEF;      // Temperature Sensor Register
+    lis3dh->ctrl_reg1       = LIS3DH_CTRL_REG1_DEF;         // Accelerometer Control Register 1
+    lis3dh->ctrl_reg2       = LIS3DH_CTRL_REG2_DEF;         // Accelerometer Control Register 2
+    lis3dh->ctrl_reg3       = LIS3DH_CTRL_REG3_DEF;         // Accelerometer Control Register 3
+    lis3dh->ctrl_reg4       = LIS3DH_CTRL_REG4_DEF;         // Accelerometer Control Register 4
+    lis3dh->ctrl_reg5       = LIS3DH_CTRL_REG5_DEF;         // Accelerometer Control Register 5
+    lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
+    lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
+    lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
+
+    lis3dh->out_x_l         = LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
+    lis3dh->out_x_h         = LIS3DH_OUT_X_H_DEF;           // X-Axis Acceleration Data High Register
+    lis3dh->out_y_l         = LIS3DH_OUT_Y_L_DEF;           // Y-Axis Acceleration Data Low Register
+    lis3dh->out_y_h         = LIS3DH_OUT_Y_H_DEF;           // Y-Axis Acceleration Data High Register
+    lis3dh->out_z_l         = LIS3DH_OUT_Z_L_DEF;           // Z-Axis Acceleration Data Low Register
+    lis3dh->out_z_h         = LIS3DH_OUT_Z_H_DEF;           // Z-Axis Acceleration Data High Register
+    
+    lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEF;     // FIFO Control Register
+    lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEF;      // FIFO Source Register
+    lis3dh->int1_cfg        = LIS3DH_INT1_CFG_DEF;          // Interrupt Configuration Register
+    lis3dh->int1_src        = LIS3DH_INT1_SRC_DEF;          // Interrupt Source Register
+    lis3dh->int1_ths        = LIS3DH_INT1_THS_DEF;          // Interrupt Threshold Register
+    lis3dh->int1_duration   = LIS3DH_INT1_DURATION_DEF;     // Interrupt Duration Register
+    lis3dh->int2_cfg        = LIS3DH_INT2_CFG_DEF;          //
+    lis3dh->int2_src        = LIS3DH_INT2_SRC_DEF;          //
+    lis3dh->int2_ths        = LIS3DH_INT2_THS_DEF;          //
+    lis3dh->int2_duration   = LIS3DH_INT2_DURATION_DEF;     //       
+    lis3dh->click_cfg       = LIS3DH_CLICK_CFG_DEF;         // Interrupt Click Recognition Register
+    lis3dh->click_src       = LIS3DH_CLICK_SRC_DEF;         // Interrupt Click Source Register
+    lis3dh->click_ths       = LIS3DH_CLICK_THS_DEF;         // Interrupt Click Threshold Register
+    lis3dh->time_limit      = LIS3DH_TIME_LIMIT_DEF;        // Click Time Limit Register
+    lis3dh->time_latency    = LIS3DH_TIME_LATENCY_DEF;      // Click Time Latency Register
+    lis3dh->time_window     = LIS3DH_TIME_WINDOW_DEF;       // Click Time Window Register
+    lis3dh->act_ths         = LIS3DH_ACT_THS_DEF;           //
+    lis3dh->act_dur         = LIS3DH_ACT_DUR_DEF;           //
+}
+
+static void lis3dh_realize(DeviceState *dev, Error **errp)
+{
+    printf("QEMU LIS3DH realize\n");
+    LIS3DHState *lis3dh = LIS3DH(dev);
+    
+    /* Initialize I2C state */
+    lis3dh->address         = LIS3DH_DEFAULT_ADDRESS;
+	lis3dh->ptr             = 0xFF;
+	lis3dh->auto_increment  = false;
+	lis3dh->address_phase   = false;
+   
+    /* Reset registers */
+    lis3dh_reset_registers(lis3dh);
+
+}
+
+static void lis3dh_unrealize(DeviceState *dev)
+{
+    //LIS3DHState *lis3dh = LIS3DH(dev);
+    (void)dev;
+}
+
 static void lis3dh_initfn(Object *obj)
 {
     object_property_add(obj, "accel-x", "int",
