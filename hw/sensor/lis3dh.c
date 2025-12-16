@@ -349,21 +349,10 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
 	lis3dh->ptr             = 0xFF;
 	lis3dh->auto_increment  = false;
 	lis3dh->address_phase   = false;
-
-//    /* Create data update timer */
-//    lis3dh->timer = timer_new_ns(QEMU_CLOCK_VIRTUAL, lis3dh_timer_update_data, lis3dh);
-//    timer_mod
-//    (
-//        lis3dh->timer, 
-//        qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) + NANOSECONDS_PER_SECOND / 100
-//    ); // 100Hz update
-    
+   
     /* Reset registers */
     lis3dh_reg_reset(lis3dh);
-        
-    /* Enable hotplug */
-    /*DeviceClass *dc = DEVICE_GET_CLASS(dev);
-    dc->hotpluggable = true;*/
+
 }
 
 static void lis3dh_unrealize(DeviceState *dev)
@@ -375,7 +364,7 @@ static void lis3dh_unrealize(DeviceState *dev)
 static bool lis3dh_check_if_address_reserved( uint8_t src)
 {
     if ( src == 0x0E )
-            return true;
+        return true;
 
     for ( uint8_t i = 0x00; i < 0x07; i++ )
     {
@@ -392,7 +381,7 @@ static bool lis3dh_check_if_address_reserved( uint8_t src)
     return false;
 }
 
-static bool lis3dh_write_in_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
+static bool lis3dh_write_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
 {
     if ( lis3dh_check_if_address_reserved(dir) ) //#TODO print error message
         return false;
@@ -525,17 +514,14 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
         case I2C_START_SEND:    // Start of write operation
             /* Master is starting a WRITE operation 
             (sending data to the device) */
-            printf("\n\n LIS3DH SEND");
             lis3dh->ptr             = 0xFF;
 			lis3dh->auto_increment  = false;
-			//lis3dh->data_ready      = false;
-			lis3dh->address_phase   = true;    // next data is register addres
+			lis3dh->address_phase   = true;
             break;
             
         case I2C_START_RECV:    // Start of read operation
             /* Master is starting a READ operation 
             (requesting data from the device) */
-            printf("\n\n LIS3DH RECV");
 			if (lis3dh->ptr == 0xFF)
 				lis3dh->ptr = LIS3DH_REG_ACCEL_WHO_AM_I;
 			lis3dh->address_phase = false;
@@ -544,7 +530,6 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
         case I2C_FINISH:        // Stop condition
             /* Master ends the transaction 
             (STOP condition) */
-            printf("\n\n LIS3DH STOP");
             break;
             
         case I2C_NACK:          // NACK received
@@ -562,8 +547,6 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
     LIS3DHState *lis3dh = LIS3DH(i2c);
 
-    printf("\n\n LIS3DH received: 0x%02x\n", data);
-
 	if (lis3dh->ptr == 0xFF && lis3dh->address_phase)
 	{
 		lis3dh->ptr = data & LIS3DH_SUB_REG_MASK;
@@ -571,9 +554,9 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 		lis3dh->address_phase = false;
 	}else
 	{
-		lis3dh_write_in_register( lis3dh, lis3dh->ptr, data);
+		lis3dh_write_register( lis3dh, lis3dh->ptr, data);
 		if (lis3dh->auto_increment)
-			lis3dh->ptr++; //#TODO  
+			lis3dh->ptr++;
 	}
 	return 0;
 }
@@ -584,12 +567,8 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 
     uint8_t value = lis3dh_read_register( lis3dh );
 
-    printf("\nLIS3DH autoincrement: %s\n", lis3dh->auto_increment ? "true" : "false" );
-
     if (lis3dh->auto_increment)
         lis3dh->ptr++;
-
-    printf("\nLIS3DH sending: 0x%02x\n", value);
     
 	return value;
 }
