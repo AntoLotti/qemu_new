@@ -32,14 +32,6 @@
 #include "qemu/timer.h"
 #include "qom/object.h"
 
-/**************************************************************************
-    ACCELEROMETER ADDRESSES
-**************************************************************************/
-#define LIS3DH_DEFAULT_ADDRESS          ((uint8_t)0x18 << 1)    // if SDO/SA0 = 1 -> 0001 1000, then 0001 1000 << 1 = 00011 0000
-#define LIS3DH_ALTERNATIVE_ADDRESS      ((uint8_t)0x19 << 1)    // if SDO/SA0 = 0 -> 0001 1001, then 0001 1001 << 1 = 00011 0010 
-
-#define LIS3DH_SUB_REG_MASK             0x7F                    // Mask to get the LIS3DH register direcction
-#define LIS3DH_SUB_AUTO_INC_MASK        0x80                    // Mask to get the Auto-increment bit
 
 /**************************************************************************
     ACCELEROMETER REGISTERS ADDRESSES
@@ -231,12 +223,28 @@
 #define LIS3DH_INT1_CFG_BIT_FSS0            (uint8_t)BIT(0)         
 
 /**************************************************************************
+    ACCELEROMETER ADDRESSES
+**************************************************************************/
+#define LIS3DH_DEFAULT_ADDRESS          ((uint8_t)0x18 << 1)    // if SDO/SA0 = 1 -> 0001 1000, then 0001 1000 << 1 = 00011 0000
+#define LIS3DH_ALTERNATIVE_ADDRESS      ((uint8_t)0x19 << 1)    // if SDO/SA0 = 0 -> 0001 1001, then 0001 1001 << 1 = 00011 0010 
+
+#define LIS3DH_SUB_REG_MASK             0x7F                    // Mask to get the LIS3DH register direcction
+#define LIS3DH_SUB_AUTO_INC_MASK        0x80                    // Mask to get the Auto-increment bit
+
+
+/**************************************************************************
     ACCELERATION CONSTANT (m/s²)
 **************************************************************************/
-#define LIS3DH_ACCELERATION_CONST   (9.81f)   //
+#define LIS3DH_ACCELERATION_CONST   (9.81f)         //
 
 #define LIS3DH_HIGH_MODE_MAX    (int16_t)(2047)     //
 #define LIS3DH_HIGH_MODE_MIN    (int16_t)(-2048)    //
+
+/**************************************************************************
+    TEMPERATURE CONSTANTS (ºC)
+**************************************************************************/
+#define LIS3DH_TEMP_MAX    -40
+#define LIS3DH_TEMP_MIN     85
 
 /**************************************************************************
     ACCELEROMETER MODE TYPES
@@ -297,7 +305,6 @@ typedef struct LIS3DHState
 	uint8_t ptr;           // Current register pointer
 	bool auto_increment;   // Auto-advance pointer after access
 	bool address_phase;    // I2C command phase tracker
-//    QEMUTimer *timer;      // Data update timer
 
     /* Registers */
     // directions [0x00-0x06] reserved

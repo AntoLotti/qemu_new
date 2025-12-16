@@ -74,8 +74,18 @@ static bool lis3dh_temp_condition_enable(LIS3DHState *src)
 }
 
 
-static void lis3dh_temp_set_data_in_reg(LIS3DHState *src, int64_t data)
+static void lis3dh_temp_set_data(LIS3DHState *src, int64_t data)
 {
+
+    if ( data < LIS3DH_TEMP_MIN || data > LIS3DH_TEMP_MAX )
+    {
+        return;
+        /**
+        * TODO:
+        * Error handler
+        */
+    }
+    
     /** 
      * intput -40ºC
      * value = -40 
@@ -86,12 +96,6 @@ static void lis3dh_temp_set_data_in_reg(LIS3DHState *src, int64_t data)
     /* I assume a factory calibration point of 25ºC for an output of 0 */
     /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
     
-    /**
-     * TODO: 
-     * check the max value -(2^{n-1}) to (2^{n-1} - 1)
-     * n = 10 -> -512 to 511;
-     */
-
     /**
      * data * 1 LSB/ºC
      * raw = (-40.0) - 25.0 = -65.0ºC = 1111 1111  1011 1111
@@ -108,7 +112,7 @@ static void lis3dh_temp_set_data_in_reg(LIS3DHState *src, int64_t data)
     SENSOR_LIS3DH("temp, set, l: 0x%02x", src->adc_3_l);
 }
 
-static int64_t lis3dh_temp_get_data_from_reg(LIS3DHState *src)
+static int64_t lis3dh_temp_get_data(LIS3DHState *src)
 {
 
     int16_t raw = ((int16_t)( ( (int16_t)src->adc_3_h << 8 ) | src->adc_3_h ) >> 6 );
@@ -267,7 +271,7 @@ static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opa
          */
         visit_type_int(v, name, &value, errp);
         SENSOR_LIS3DH("data recived: %ld", value);
-        lis3dh_temp_set_data_in_reg(s, value);
+        lis3dh_temp_set_data(s, value);
     }
 
 }
@@ -279,7 +283,7 @@ static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opa
     int64_t value = 0x00;
     if(lis3dh_temp_condition_enable(s))
     {
-        value = lis3dh_temp_get_data_from_reg(s);
+        value = lis3dh_temp_get_data(s);
     }    
 
     visit_type_int(v, name, &value, errp);
