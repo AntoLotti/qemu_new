@@ -1,5 +1,6 @@
 #include "qemu/osdep.h"
 #include "hw/sensor/lis3dh.h"
+#include "hw/i2c/i2c.h"
 #include "qom/object.h"
 #include "qemu/log.h"
 #include "hw/irq.h"
@@ -23,9 +24,6 @@
 
 #endif
 
-/**************************************************************************
-    ACCELEROMETER DATA GENERATION
-**************************************************************************/
 //static LIS3DH_FullScale_t lis3dh_get_current_fs(LIS3DHState *src)
 //{
 //    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
@@ -62,25 +60,25 @@
 //    return mode;
 //}
 
-
-static void lis3dh_acc_data_transf(LIS3DHState *src, float data, uint8_t mode)
+/**************************************************************************
+    ACCELEROMETER DATA GENERATION
+**************************************************************************/
+static void lis3dh_acc_data_transf(LIS3DHState *src, float data, uint8_t axis)
 {
     /**
-    *   TODO: develop each lis3dh mode
-    *   - NOW only high resolution mode with a FS of +- 2g
-    */
-
-    float data_with_So = data / ( 0.001f );   // -1,023(g) / 0.001(g/LSB) = -1023 LSB 
+     * Convert acceleration to sensor LSB format
+     * Currently: high resolution mode with ±2g full scale
+     * Sensitivity: 0.001g/LSB
+     * TODO: Handle different modes and full scales
+     */
+    float data_with_So = data / (0.001f);
 
     /**
      * TODO: check the max value of each modes
      */
 
-    bool is_pos = true;
-
-    if ( data_with_So < 0 )
-        is_pos = false;
-
+    /* Handle rounding */
+    bool is_pos = (data_with_So >= 0);
     int16_t data_in_16b = 0x00;
 
     if ( fabsf(data_with_So - (int)data_with_So) >= 0.5f )
@@ -89,34 +87,32 @@ static void lis3dh_acc_data_transf(LIS3DHState *src, float data, uint8_t mode)
         data_in_16b = (int16_t)data_with_So;
         
     /**
-    * TODO: change the shift depending of the mode
-    * - now High resolution mode (12 bits) --> 4 bits shift
-    */
-    
-    int16_t x_raw_data = data_in_16b << 4;  // 1111 1100 0000 0001 --> 1100 0000 0001 0000
-    printf("\n\n x_raw_data: 0x%x \n\n", x_raw_data);
+     * TODO: Change shift based on operating mode
+     * - High resolution mode (12-bit) -> 4-bit shift
+     */    
+    int16_t raw_data = data_in_16b << 4;  // 1111 1100 0000 0001 --> 1100 0000 0001 0000
+    SENSOR_LIS3DH("Accel updated - axis:%d value:%.3fg raw:0x%04x", axis, data, raw_data);
     
     // Split Data Into Registers //
-
-    if (mode == 0)
+    if (axis == 0)
     {
-        src->out_x_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
+        src->out_x_h = (uint8_t)( (raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
         printf("\n\n out_x_h: 0x%x \n\n", src->out_x_h);
-        src->out_x_l = (uint8_t)(x_raw_data & 0x00FF);          // 0001 0000 = 0x10
+        src->out_x_l = (uint8_t)(raw_data & 0x00FF);          // 0001 0000 = 0x10
         printf("\n\n out_x_l: 0x%x \n\n", src->out_x_l);
     }
-    else if (mode == 1)
+    else if (axis == 1)
     {
-        src->out_y_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
+        src->out_y_h = (uint8_t)( (raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
         printf("\n\n out_x_h: 0x%x \n\n", src->out_y_h);
-        src->out_y_l = (uint8_t)(x_raw_data & 0x00FF);          // 0001 0000 = 0x10
+        src->out_y_l = (uint8_t)(raw_data & 0x00FF);          // 0001 0000 = 0x10
         printf("\n\n out_x_l: 0x%x \n\n", src->out_y_l);
     }
-    else if (mode == 3)
+    else if (axis == 3)
     {
-        src->out_z_h = (uint8_t)( (x_raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
+        src->out_z_h = (uint8_t)( (raw_data & 0xFF00) >> 8 ); // 1100 0000 = 0xc0
         printf("\n\n out_x_h: 0x%x \n\n", src->out_z_h);
-        src->out_z_l = (uint8_t)(x_raw_data & 0x00FF);          // 0001 0000 = 0x10
+        src->out_z_l = (uint8_t)(raw_data & 0x00FF);          // 0001 0000 = 0x10
         printf("\n\n out_x_l: 0x%x \n\n", src->out_z_l);
     }
     
@@ -309,7 +305,7 @@ static bool lis3dh_address_reserved( uint8_t src)
     return false;
 }
 
-static bool lis3dh_write_register( LIS3DHState *dst, uint8_t dir, uint8_t src )
+static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t src )
 {
     if ( lis3dh_address_reserved(dir) ) //#TODO print error message
         return false;
@@ -493,7 +489,9 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
     uint8_t value = lis3dh_read_register( lis3dh );
 
     if (lis3dh->auto_increment)
+    {
         lis3dh->ptr++;
+    }
     
 	return value;
 }

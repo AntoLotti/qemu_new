@@ -29,7 +29,7 @@
 
 #include "hw/sysbus.h"
 #include "hw/i2c/i2c.h"
-#include "qemu/timer.h"
+#include "hw/irq.h"
 #include "qom/object.h"
 
 
@@ -213,14 +213,27 @@
 #define LIS3DH_FIFO_SRC_REG_BIT_EMPTY       (uint8_t)BIT(5)
 #define LIS3DH_FIFO_SRC_REG_BITS_FSS        (uint8_t)(0x1F)
 
-#define LIS3DH_INT1_CFG_BIT_AOI             (uint8_t)BIT(7)
-#define LIS3DH_INT1_CFG_BIT_OVERN_FIFO      (uint8_t)BIT(6)
-#define LIS3DH_INT1_CFG_BIT_EMPTY           (uint8_t)BIT(5)
-#define LIS3DH_INT1_CFG_BIT_FSS4            (uint8_t)BIT(4)
-#define LIS3DH_INT1_CFG_BIT_FSS3            (uint8_t)BIT(3)
-#define LIS3DH_INT1_CFG_BIT_FSS2            (uint8_t)BIT(2)
-#define LIS3DH_INT1_CFG_BIT_FSS1            (uint8_t)BIT(1)
-#define LIS3DH_INT1_CFG_BIT_FSS0            (uint8_t)BIT(0)         
+#define LIS3DH_INT1_CFG_AOI_BIT             (uint8_t)BIT(7)
+#define LIS3DH_INT1_CFG_6D_BIT              (uint8_t)BIT(6)
+#define LIS3DH_INT1_CFG_ZHIE_BIT            (uint8_t)BIT(5)
+#define LIS3DH_INT1_CFG_ZLIE_BIT            (uint8_t)BIT(4)
+#define LIS3DH_INT1_CFG_YHIE_BIT            (uint8_t)BIT(3)
+#define LIS3DH_INT1_CFG_YLIE_BIT            (uint8_t)BIT(2)
+#define LIS3DH_INT1_CFG_XHIE_BIT            (uint8_t)BIT(1)
+#define LIS3DH_INT1_CFG_XLIE_BIT            (uint8_t)BIT(0)         
+
+#define LIS3DH_INT1_SRC_IA_BIT              (uint8_t)BIT(6)
+#define LIS3DH_INT1_SRC_ZH_BIT              (uint8_t)BIT(5)
+#define LIS3DH_INT1_SRC_ZL_BIT              (uint8_t)BIT(4)
+#define LIS3DH_INT1_SRC_YH_BIT              (uint8_t)BIT(3)
+#define LIS3DH_INT1_SRC_YL_BIT              (uint8_t)BIT(2)
+#define LIS3DH_INT1_SRC_XH_BIT              (uint8_t)BIT(1)
+#define LIS3DH_INT1_SRC_XL_BIT              (uint8_t)BIT(0)     
+
+#define LIS3DH_INT1_THS_BITS                (uint8_t)(0x7F)
+
+#define LIS3DH_INT1_DURATION_BITS           (uint8_t)(0x7F)   
+
 
 /**************************************************************************
     ACCELEROMETER ADDRESSES
@@ -306,8 +319,14 @@ typedef struct LIS3DHState
 	bool auto_increment;   // Auto-advance pointer after access
 	bool address_phase;    // I2C command phase tracker
 
+    qemu_irq int1;                    /* Interrupt 1 line to STM32 */
+    qemu_irq int2;                    /* Interrupt 2 line to STM32 */
+    uint8_t int1_duration_counter;    /* Debounce counter for INT1 */
+    uint8_t int2_duration_counter;    /* Debounce counter for INT2 */
+
     /* Registers */
     // directions [0x00-0x06] reserved
+    
     uint8_t status_reg_aux;     // Status Register
     uint8_t adc_1_l;            // 1-Axis Acceleration Data Low Register
     uint8_t adc_1_h;            // 1-Axis Acceleration Data High Register
@@ -315,9 +334,13 @@ typedef struct LIS3DHState
     uint8_t adc_2_h;            // 2-Axis Acceleration Data High Register
     uint8_t adc_3_l;            // 3-Axis Acceleration Data Low Register
     uint8_t adc_3_h;            // 3-Axis Acceleration Data High Register
+    
     // direction 0x0E reserved
+    
     uint8_t who_am_i;           // Device identification Register 
+    
     // directions [0x10-0x1D] reserved
+    
     uint8_t ctrl_reg0;          //
     uint8_t temp_cfg_reg;       // Temperature Sensor Register
     uint8_t ctrl_reg1;          // Accelerometer Control Register 1
@@ -326,30 +349,38 @@ typedef struct LIS3DHState
     uint8_t ctrl_reg4;          // Accelerometer Control Register 4
     uint8_t ctrl_reg5;          // Accelerometer Control Register 5
     uint8_t ctrl_reg6;          // Accelerometer Control Register 6
+    
     uint8_t reference;          // Reference/Datacapture Register
     uint8_t status_reg;         // Status Register 2
+    
     uint8_t out_x_l;            // X-Axis Acceleration Data Low Register
     uint8_t out_x_h;            // X-Axis Acceleration Data High Register
     uint8_t out_y_l;            // Y-Axis Acceleration Data Low Register
     uint8_t out_y_h;            // Y-Axis Acceleration Data High Register
     uint8_t out_z_l;            // Z-Axis Acceleration Data Low Register
     uint8_t out_z_h;            // Z-Axis Acceleration Data High Register
+    
     uint8_t fifo_ctrl_reg;      // FIFO Control Register
     uint8_t fifo_src_reg;       // FIFO Source Register
+
     uint8_t int1_cfg;           // Interrupt 1 Configuration Register
     uint8_t int1_src;           // Interrupt 1 Source Register
     uint8_t int1_ths;           // Interrupt 1 Threshold Register
     uint8_t int1_duration;      // Interrupt 1 Duration Register
+    
     uint8_t int2_cfg;           // Interrupt 2 Configuration Register
     uint8_t int2_src;           // Interrupt 2 Source Register
     uint8_t int2_ths;           // Interrupt 2 Threshold Register
     uint8_t int2_duration;      // Interrupt 2 Duration Register
+    
     uint8_t click_cfg;          // Interrupt Click Recognition Register
     uint8_t click_src;          // Interrupt Click Source Register
     uint8_t click_ths;          // Interrupt Click Threshold Register
+    
     uint8_t time_limit;         // Click Time Limit Register
     uint8_t time_latency;       // Click Time Latency Register
     uint8_t time_window;        // Click Time Window Register
+    
     uint8_t act_ths;            //
     uint8_t act_dur;            //
 } LIS3DHState;
