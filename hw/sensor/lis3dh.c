@@ -24,41 +24,138 @@
 
 #endif
 
-//static LIS3DH_FullScale_t lis3dh_get_current_fs(LIS3DHState *src)
-//{
-//    LIS3DH_FullScale_t fs = LIS3DH_FS_2G;
-//
-//    uint8_t temp = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;    // 00XX 0000 -> 0000 00XX
-//
-//    if ( !( temp > LIS3DH_FS_16G) )
-//        fs = temp;
-//
-//    return fs;
-//}
-//
-//static LIS3DH_Mode_t lis3dh_get_operating_mode(LIS3DHState *src)
-//{
-//    LIS3DH_Mode_t mode = LIS3DH_MODE_HIGH_RES;
-//
-//    uint8_t temp =  
-//        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
-//        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
-//
-//    if ( !( temp >= LIS3DH_MODE_NOT_ALLOWED) )
-//        mode = temp;
-//
-//    return mode;
-//}
-//
-//static LIS3DH_ODR_t lis3dh_get_ODR_mode(LIS3DHState *src)
-//{
-//    LIS3DH_ODR_t mode = (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BITS_ODR) >> 4;
-//    
-//    if( mode < LIS3DH_ODR_POWER_DOWN || mode > LIS3DH_ODR_OTHER )
-//        mode = LIS3DH_ODR_POWER_DOWN; 
-//
-//    return mode;
-//}
+static void lis3dh_set_So(LIS3DHState *src)
+{
+    float So = 0.0f;
+
+    switch (src->config->mode)
+    {
+        case LIS3DH_MODE_HIGH_RES:  // 12-bit
+            switch (src->config->fscale)
+            {
+                case LIS3DH_FS_2G:  So = LIS3DH_So_HIG_RES_2G;	break;
+                case LIS3DH_FS_4G:  So = LIS3DH_So_HIG_RES_4G;	break;
+                case LIS3DH_FS_8G:  So = LIS3DH_So_HIG_RES_8G;	break;
+                case LIS3DH_FS_16G: So = LIS3DH_So_HIG_RES_16G;	break;
+            }
+            break;
+
+        case LIS3DH_MODE_NORMAL:  // 10-bit
+            switch (src->config->fscale)
+            {
+                case LIS3DH_FS_2G:  So = LIS3DH_So_NORMAL_2G;	break;
+                case LIS3DH_FS_4G:  So = LIS3DH_So_NORMAL_4G;   break;
+                case LIS3DH_FS_8G:  So = LIS3DH_So_NORMAL_8G;  	break;
+                case LIS3DH_FS_16G: So = LIS3DH_So_NORMAL_16G;  break;
+            }
+            break;
+
+        case LIS3DH_MODE_LOW_POWER:  // 8-bit
+            switch (src->config->fscale)
+            {
+                case LIS3DH_FS_2G:  So = LIS3DH_So_LOW_POWER_2G;  break;
+                case LIS3DH_FS_4G:  So = LIS3DH_So_LOW_POWER_4G;  break;
+                case LIS3DH_FS_8G:  So = LIS3DH_So_LOW_POWER_8G;  break;
+                case LIS3DH_FS_16G: So = LIS3DH_So_LOW_POWER_16G; break;
+            }
+            break;
+
+        default:
+            So = 4.0f; // Default: normal ±2g
+            SENSOR_LIS3DH("- ERROR - So set to ±2g");
+            break;
+    }
+
+    src->So = So;
+}
+
+static void lis3dh_set_operating_mode(LIS3DHState *src)
+{
+    lis3dh_mode_t mode =  
+        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
+        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
+
+    if (  mode < LIS3DH_MODE_NORMAL || mode > LIS3DH_MODE_LOW_POWER)
+#if DEBUG_LIS3DH == 0
+        mode = LIS3DH_MODE_NORMAL;
+#else
+    {
+        mode = LIS3DH_MODE_NORMAL;
+        SENSOR_LIS3DH("- ERROR - mode set to NORMAL");
+    }
+#endif
+    /**
+     * TODO: print error
+     */
+
+    src->config->mode = mode;
+    lis3dh_set_So(src);
+}
+
+static void lis3dh_set_odr(LIS3DHState *src)
+{
+    lis3dh_odr_t odr = (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BITS_ODR) >> 4;
+    
+    if( odr < LIS3DH_ODR_POWER_DOWN || odr > LIS3DH_ODR_1250 )
+        odr = LIS3DH_ODR_POWER_DOWN; 
+
+#if DEBUG_LIS3DH == 0
+        odr = LIS3DH_MODE_NORMAL;
+#else
+    {
+        odr = LIS3DH_MODE_NORMAL;
+        SENSOR_LIS3DH("- ERROR - odr set to LIS3DH_ODR_POWER_DOWN");
+    }
+#endif
+    /**
+     * TODO: print error
+     */
+
+    src->config->odr = odr;
+}
+
+static void lis3dh_set_fscale(LIS3DHState *src)
+{
+    lis3dh_fscale_t fscale = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4; // 00XX 0000 -> 0000 00XX
+
+#ifdef DEBUG_LIS3DH
+    switch (fscale)
+    {
+        case LIS3DH_FS_2G:
+            SENSOR_LIS3DH("FS set to LIS3DH_FS_2G");
+            break;
+
+        case LIS3DH_FS_4G:
+            SENSOR_LIS3DH("FS set to LIS3DH_FS_4G");
+            break;
+
+        case LIS3DH_FS_8G:
+            SENSOR_LIS3DH("FS set to LIS3DH_FS_8G");
+            break;
+
+        case LIS3DH_FS_16G:
+            SENSOR_LIS3DH("FS set to LIS3DH_FS_16G");
+            break;
+
+        default:
+            SENSOR_LIS3DH("- ERROR - FS set to LIS3DH_FS_2G");
+        break;
+    }
+#endif
+
+    if (fscale > LIS3DH_FS_16G)
+#if DEBUG_LIS3DH == 0
+        fscale = LIS3DH_FS_2G;
+#else
+    {
+        fscale = LIS3DH_FS_2G;
+        SENSOR_LIS3DH("- ERROR - mode set to NORMAL");
+    }
+#endif
+
+    src->config->fscale = fscale;
+    lis3dh_set_So(src);
+}
 
 /**************************************************************************
     ACCELEROMETER DATA GENERATION

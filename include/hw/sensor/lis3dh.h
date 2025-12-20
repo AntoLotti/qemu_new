@@ -27,6 +27,7 @@
 #ifndef INC_LIS3DH_I2C_H_
 #define INC_LIS3DH_I2C_H_
 
+#include "lis3dh_types.h"
 #include "hw/sysbus.h"
 #include "hw/i2c/i2c.h"
 #include "hw/irq.h"
@@ -259,39 +260,22 @@
 #define LIS3DH_TEMP_MAX    -40
 #define LIS3DH_TEMP_MIN     85
 
-/**************************************************************************
-    ACCELEROMETER MODE TYPES
-**************************************************************************/
 
-typedef enum LIS3DH_FullScale_e
-{
-    LIS3DH_FS_2G    = 0,
-    LIS3DH_FS_4G    = 1,
-    LIS3DH_FS_8G    = 2,
-    LIS3DH_FS_16G   = 3
-}LIS3DH_FullScale_t;
+#define LIS3DH_So_HIG_RES_2G    1.0f	// mg/LSB or mg/digit
+#define LIS3DH_So_HIG_RES_4G    2.0f    // mg/LSB or mg/digit
+#define LIS3DH_So_HIG_RES_8G    4.0f    // mg/LSB or mg/digit
+#define LIS3DH_So_HIG_RES_16G   12.0f   // mg/LSB or mg/digit
 
-typedef enum LIS3DH_Mode_e
-{
-    LIS3DH_MODE_NORMAL      = 0,
-    LIS3DH_MODE_HIGH_RES    = 1,
-    LIS3DH_MODE_LOW_POWER   = 2,
-    LIS3DH_MODE_NOT_ALLOWED = 3,
-}LIS3DH_Mode_t;
+#define LIS3DH_So_NORMAL_2G     4.0f    // mg/LSB or mg/digit
+#define LIS3DH_So_NORMAL_4G     8.0f    // mg/LSB or mg/digit
+#define LIS3DH_So_NORMAL_8G     16.0f   // mg/LSB or mg/digit
+#define LIS3DH_So_NORMAL_16G    48.0f   // mg/LSB or mg/digit
 
-typedef enum LIS3DH_ODR_e
-{
-    LIS3DH_ODR_POWER_DOWN   = 0,
-    LIS3DH_ODR_1HZ          = 1,
-    LIS3DH_ODR_10HZ         = 2,
-    LIS3DH_ODR_25HZ         = 3,
-    LIS3DH_ODR_50HZ         = 4,
-    LIS3DH_ODR_100HZ        = 5,
-    LIS3DH_ODR_200HZ        = 6,
-    LIS3DH_ODR_400HZ        = 7,
-    LIS3DH_ODR_1_60HZ       = 8,
-    LIS3DH_ODR_OTHER        = 9,
-}LIS3DH_ODR_t;
+#define LIS3DH_So_LOW_POWER_2G  16.0f   // mg/LSB or mg/digit
+#define LIS3DH_So_LOW_POWER_4G  32.0f   // mg/LSB or mg/digit
+#define LIS3DH_So_LOW_POWER_8G  64.0f   // mg/LSB or mg/digit
+#define LIS3DH_So_LOW_POWER_16G 192.0f  // mg/LSB or mg/digit
+
 
 /**************************************************************************
     PRIVET MACROS
@@ -318,15 +302,15 @@ typedef struct LIS3DHState
 	uint8_t ptr;           // Current register pointer
 	bool auto_increment;   // Auto-advance pointer after access
 	bool address_phase;    // I2C command phase tracker
-
+    lis3dh_config_t *config;         /**< Peripheral configuration       */
+    float So;			    /**< Sensitivity */
+    
     qemu_irq int1;                    /* Interrupt 1 line to STM32 */
     qemu_irq int2;                    /* Interrupt 2 line to STM32 */
     uint8_t int1_duration_counter;    /* Debounce counter for INT1 */
     uint8_t int2_duration_counter;    /* Debounce counter for INT2 */
 
     /* Registers */
-    // directions [0x00-0x06] reserved
-    
     uint8_t status_reg_aux;     // Status Register
     uint8_t adc_1_l;            // 1-Axis Acceleration Data Low Register
     uint8_t adc_1_h;            // 1-Axis Acceleration Data High Register
@@ -335,12 +319,8 @@ typedef struct LIS3DHState
     uint8_t adc_3_l;            // 3-Axis Acceleration Data Low Register
     uint8_t adc_3_h;            // 3-Axis Acceleration Data High Register
     
-    // direction 0x0E reserved
-    
     uint8_t who_am_i;           // Device identification Register 
-    
-    // directions [0x10-0x1D] reserved
-    
+        
     uint8_t ctrl_reg0;          //
     uint8_t temp_cfg_reg;       // Temperature Sensor Register
     uint8_t ctrl_reg1;          // Accelerometer Control Register 1
