@@ -282,7 +282,7 @@
 **************************************************************************/
 #define CASE_READ_RETURN(VAL, REG, FIELD)   case REG: VAL = (src->FIELD); break;
 
-#define CASE_WRITE_RETURN(REG, FIELD)       case REG: dst->FIELD = src; return true; break;
+#define CASE_WRITE_RETURN(REG, FIELD)       case REG: dst->FIELD = data; return true; break;
 
 /**************************************************************************
     DEVICE STRUCTURES AND QOM DECLARATION
@@ -307,8 +307,6 @@ typedef struct LIS3DHState
     
     qemu_irq int1;                    /* Interrupt 1 line to STM32 */
     qemu_irq int2;                    /* Interrupt 2 line to STM32 */
-    uint8_t int1_duration_counter;    /* Debounce counter for INT1 */
-    uint8_t int2_duration_counter;    /* Debounce counter for INT2 */
 
     /* Registers */
     uint8_t status_reg_aux;     // Status Register

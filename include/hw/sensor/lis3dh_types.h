@@ -62,6 +62,7 @@ typedef enum lis3dh_mode_e
     LIS3DH_MODE_NORMAL      = 0,
     LIS3DH_MODE_HIGH_RES    = 1,
     LIS3DH_MODE_LOW_POWER   = 2,
+    LIS3DH_MODE_NOT_ALLOWED = 3,
 }lis3dh_mode_t;
 
 /**

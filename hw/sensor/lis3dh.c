@@ -71,19 +71,24 @@ static void lis3dh_set_So(LIS3DHState *src)
 
 static void lis3dh_set_operating_mode(LIS3DHState *src)
 {
-    lis3dh_mode_t mode =  
-        ( (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
-        | ( (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 );      // 0000 X000 -> 0000 000X
+    lis3dh_mode_t mode = LIS3DH_MODE_NORMAL;
 
-    if (  mode < LIS3DH_MODE_NORMAL || mode > LIS3DH_MODE_LOW_POWER)
-#if DEBUG_LIS3DH == 0
-        mode = LIS3DH_MODE_NORMAL;
-#else
+    if((src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) != 0)
+        mode = LIS3DH_MODE_LOW_POWER;
+    else
     {
-        mode = LIS3DH_MODE_NORMAL;
-        SENSOR_LIS3DH("- ERROR - mode set to NORMAL");
+        mode = (uint8_t)(((src->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) >> 2 )       // 0000 X000 -> 0000 00X0
+            | ((src->ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) >> 3 ));      // 0000 X000 -> 0000 000X
+        
+        if (mode > LIS3DH_MODE_NOT_ALLOWED)
+        {
+            mode = LIS3DH_MODE_NORMAL;
+            src->ctrl_reg1 &= ~LIS3DH_CTRL_REG1_BIT_LPEN;
+            src->ctrl_reg4 &= ~LIS3DH_CTRL_REG4_BIT_HR;
+            SENSOR_LIS3DH("- ERROR - mode set to NORMAL");
+        }
     }
-#endif
+    
     /**
      * TODO: print error
      */
@@ -97,16 +102,16 @@ static void lis3dh_set_odr(LIS3DHState *src)
     lis3dh_odr_t odr = (src->ctrl_reg1 & LIS3DH_CTRL_REG1_BITS_ODR) >> 4;
     
     if( odr < LIS3DH_ODR_POWER_DOWN || odr > LIS3DH_ODR_1250 )
-        odr = LIS3DH_ODR_POWER_DOWN; 
-
-#if DEBUG_LIS3DH == 0
-        odr = LIS3DH_MODE_NORMAL;
-#else
     {
-        odr = LIS3DH_MODE_NORMAL;
+        odr = LIS3DH_ODR_POWER_DOWN;
+        
+        uint8_t ctrl_reg1 = src->ctrl_reg1;
+        ctrl_reg1 &= ~LIS3DH_CTRL_REG1_BITS_ODR;
+        src->ctrl_reg1 = ctrl_reg1 | (((uint8_t)(LIS3DH_ODR_POWER_DOWN)) << 4);
+
         SENSOR_LIS3DH("- ERROR - odr set to LIS3DH_ODR_POWER_DOWN");
     }
-#endif
+
     /**
      * TODO: print error
      */
@@ -216,9 +221,11 @@ static void lis3dh_acc_data_transf(LIS3DHState *src, float data, uint8_t axis)
 }
 
 static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
-{
-
+{ 
     LIS3DHState *s = LIS3DH(obj);
+    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
+        return;
+
     int64_t value = 0;
 
     // Data Generation In g //
@@ -231,6 +238,9 @@ static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *
 {
 
     LIS3DHState *s = LIS3DH(obj);
+    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_YEN) == 0 )
+        return;
+
     int64_t value = 0;
 
     // Data Generation In g //
@@ -243,6 +253,8 @@ static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *
 {
 
     LIS3DHState *s = LIS3DH(obj);
+    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_ZEN) == 0 )
+        return;
     int64_t value = 0;
 
     // Data Generation In g //
@@ -254,6 +266,8 @@ static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
+    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
+        return;
 
     int16_t raw = ((int16_t)s->out_x_h << 8) | s->out_x_l;
     int64_t value = (int64_t)((raw >> 4)*0.001f);
@@ -264,6 +278,8 @@ static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
+    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_YEN) == 0 )
+        return;
 
     int16_t raw = ((int16_t)s->out_y_h << 8) | s->out_y_l;
     int64_t value = (int64_t)((raw >> 4)*0.001f);
@@ -274,6 +290,8 @@ static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
+    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
+        return;
 
     int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
     int64_t value = (int64_t)((raw >> 4)*0.001f);
@@ -402,58 +420,117 @@ static bool lis3dh_address_reserved( uint8_t src)
     return false;
 }
 
-static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t src )
+static void lis3dh_write_ctr_reg0(LIS3DHState *dst, uint8_t data)
+{
+    dst->ctrl_reg0 = data;
+}
+
+static void lis3dh_write_ctr_reg1(LIS3DHState *dst, uint8_t data)
+{
+    uint8_t ctrl_reg1 = dst->ctrl_reg1;
+    dst->ctrl_reg1 = data;
+
+    if ((ctrl_reg1 & LIS3DH_CTRL_REG1_BITS_ODR) != (data & LIS3DH_CTRL_REG1_BITS_ODR))
+        lis3dh_set_odr(dst);
+
+    if ((ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_LPEN) != (data & LIS3DH_CTRL_REG1_BIT_LPEN))
+        lis3dh_set_operating_mode(dst);
+}
+
+static void lis3dh_write_ctr_reg2(LIS3DHState *dst, uint8_t data)
+{
+    dst->ctrl_reg2 = data;
+    /**
+     * TODO:
+     * High-pass filter logic
+     */
+}
+
+static void lis3dh_write_ctr_reg3(LIS3DHState *dst, uint8_t data)
+{
+    dst->ctrl_reg3 = data;
+    /**
+     * TODO:
+     * Interruptions logic
+     */
+}
+
+static void lis3dh_write_ctr_reg4(LIS3DHState *dst, uint8_t data)
+{
+    uint8_t ctrl_reg4 = dst->ctrl_reg4;
+    dst->ctrl_reg4 = data;
+
+    if ((ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) != (data & LIS3DH_CTRL_REG4_BITS_FS))
+        lis3dh_set_fscale(dst);
+
+    if ((ctrl_reg4 & LIS3DH_CTRL_REG4_BIT_HR) != (data & LIS3DH_CTRL_REG4_BIT_HR))
+        lis3dh_set_operating_mode(dst);
+
+    /**
+     * TODO:
+     * - Big and Little endian logic
+     */
+}
+
+static void lis3dh_write_ctr_reg5(LIS3DHState *dst, uint8_t data)
+{
+    dst->ctrl_reg5 = data;
+    /**
+     * TODO:
+     * - FIFO logic
+     * - Interruption Logic
+     * - Latch logic
+     */
+}
+
+static void lis3dh_write_ctr_reg6(LIS3DHState *dst, uint8_t data)
+{
+    dst->ctrl_reg6 = data;
+    /**
+     * TODO: 
+     * - Interruptions logic
+     * - 
+     */
+}
+
+static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
 {
     if ( lis3dh_address_reserved(dir) ) //#TODO print error message
         return false;
     
     switch (dir)
     {
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_STATUS_REG_AUX, status_reg_aux)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC1_L, adc_1_l)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC1_H, adc_1_h)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC2_L, adc_2_l)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC2_H, adc_2_h)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_L, adc_3_l)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_ADC3_H, adc_3_h)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_WHO_AM_I, who_am_i)
-        CASE_WRITE_RETURN(LIS3DH_REG_CTRL_REG0, ctrl_reg0)
-        CASE_WRITE_RETURN(LIS3DH_REG_TEMP_CFG_REG, temp_cfg_reg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG1, ctrl_reg1)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG2, ctrl_reg2)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG3, ctrl_reg3)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG4, ctrl_reg4)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG5, ctrl_reg5)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CTRL_REG6, ctrl_reg6)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_REFERENCE, reference)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_STATUS_REG, status_reg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_X_L, out_x_l)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_X_H, out_x_h)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_Y_L, out_y_l)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_Y_H, out_y_h)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_Z_L, out_z_l)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_OUT_Z_H, out_z_h)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_FIFO_CTRL, fifo_ctrl_reg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_FIFO_SRC, fifo_src_reg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT1_CFG, int1_cfg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT1_SRC, int1_src)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT1_THS, int2_ths)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT1_DURATION, int1_duration)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT2_CFG, int2_cfg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT2_SRC, int2_src)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT2_THS, int2_ths)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_INT2_DURATION, int2_duration)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CLICK_CFG, click_cfg)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CLICK_SRC, click_src)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_CLICK_THS, click_ths)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_TIME_LIMIT, time_limit)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_TIME_LATENCY, time_latency)
-        CASE_WRITE_RETURN(LIS3DH_REG_ACCEL_TIME_WINDOW, time_window)
-        CASE_WRITE_RETURN(LIS3DH_ACT_THS, act_ths)
-        CASE_WRITE_RETURN(LIS3DH_ACT_DUR, act_dur)
+        case LIS3DH_REG_CTRL_REG0:          lis3dh_write_ctr_reg0(dst, data); return true; break;
+        case LIS3DH_REG_ACCEL_CTRL_REG1:    lis3dh_write_ctr_reg1(dst, data);  return true; break;
+        case LIS3DH_REG_ACCEL_CTRL_REG2:    lis3dh_write_ctr_reg2(dst, data);  return true; break;
+        case LIS3DH_REG_ACCEL_CTRL_REG3:    lis3dh_write_ctr_reg3(dst, data);  return true; break;
+        case LIS3DH_REG_ACCEL_CTRL_REG4:    lis3dh_write_ctr_reg4(dst, data);  return true; break;
+        case LIS3DH_REG_ACCEL_CTRL_REG5:    lis3dh_write_ctr_reg5(dst, data);  return true; break;
+        case LIS3DH_REG_ACCEL_CTRL_REG6:    lis3dh_write_ctr_reg6(dst, data);  return true; break;
+
+        case LIS3DH_REG_ACCEL_REFERENCE:    dst->reference = data;  return true; break;
+        case LIS3DH_REG_ACCEL_FIFO_CTRL:    dst->fifo_ctrl_reg = data;  return true; break;
+        case LIS3DH_REG_ACCEL_INT1_CFG:     dst->int1_cfg = data;  return true; break;
+        case LIS3DH_REG_ACCEL_INT1_THS:     dst->int1_ths = data;  return true; break;
+        case LIS3DH_REG_ACCEL_INT1_DURATION:     dst->int1_duration = data;  return true; break;
+
+        case LIS3DH_REG_ACCEL_INT2_CFG:     dst->int2_cfg = data;  return true; break;
+        case LIS3DH_REG_ACCEL_INT2_THS:     dst->int2_ths = data;  return true; break;
+        case LIS3DH_REG_ACCEL_INT2_DURATION:     dst->int2_duration = data;  return true; break;
+
+        case LIS3DH_REG_ACCEL_CLICK_CFG:    dst->click_cfg = data;      return true; break;
+        case LIS3DH_REG_ACCEL_CLICK_THS:    dst->click_ths = data;      return true; break;
+        case LIS3DH_REG_ACCEL_TIME_LIMIT:   dst->time_limit = data;     return true; break;
+        case LIS3DH_REG_ACCEL_TIME_LATENCY: dst->time_latency = data;   return true; break;
+        case LIS3DH_REG_ACCEL_TIME_WINDOW:  dst->time_window = data;    return true; break;
+
+        case LIS3DH_ACT_THS: dst->act_ths = data;   return true; break;
+        case LIS3DH_ACT_DUR:  dst->act_dur = data;    return true; break;
 
         default:
-            //#TODO print error message
+            /**
+             * TODO: print error message
+             */
             return false;
             break;
     }
@@ -598,17 +675,17 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 **************************************************************************/
 static void lis3dh_reset_registers(LIS3DHState *lis3dh)
 {
-    // directions [0x00-0x06] reserved
     lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_AUX_DEF;    // Status Register
+
     lis3dh->adc_1_l         = LIS3DH_ADC_1_L_DEF;           // 1-Axis Acceleration Data Low Register
     lis3dh->adc_1_h         = LIS3DH_ADC_1_H_DEF;           // 1-Axis Acceleration Data High Register
     lis3dh->adc_2_l         = LIS3DH_ADC_2_L_DEF;           // 2-Axis Acceleration Data Low Register
     lis3dh->adc_2_h         = LIS3DH_ADC_2_H_DEF;           // 2-Axis Acceleration Data High Register
     lis3dh->adc_3_l         = LIS3DH_ADC_3_L_DEF;           // 3-Axis Acceleration Data Low Register
     lis3dh->adc_3_h         = LIS3DH_ADC_3_H_DEF;           // 3-Axis Acceleration Data High Register
-    // direction 0x0E reserved
+
     lis3dh->who_am_i        = LIS3DH_WHO_AM_I_DEF;          // Device identification Register 
-    // directions [0x10-0x1D] reserved
+
     lis3dh->ctrl_reg0       = LIS3DH_CTRL_REG0_DEF;         //
     lis3dh->temp_cfg_reg    = LIS3DH_TEMP_CFG_REG_DEF;      // Temperature Sensor Register
     lis3dh->ctrl_reg1       = LIS3DH_CTRL_REG1_DEF;         // Accelerometer Control Register 1
@@ -617,7 +694,9 @@ static void lis3dh_reset_registers(LIS3DHState *lis3dh)
     lis3dh->ctrl_reg4       = LIS3DH_CTRL_REG4_DEF;         // Accelerometer Control Register 4
     lis3dh->ctrl_reg5       = LIS3DH_CTRL_REG5_DEF;         // Accelerometer Control Register 5
     lis3dh->ctrl_reg6       = LIS3DH_CTRL_REG6_DEF;         // Accelerometer Control Register 6
+
     lis3dh->reference       = LIS3DH_REFERENCE_DEF;         // Reference/Datacapture Register
+
     lis3dh->status_reg      = LIS3DH_STATUS_REG_DEF;        // Status Register 2
 
     lis3dh->out_x_l         = LIS3DH_OUT_X_L_DEF;           // X-Axis Acceleration Data Low Register
@@ -629,20 +708,25 @@ static void lis3dh_reset_registers(LIS3DHState *lis3dh)
     
     lis3dh->fifo_ctrl_reg   = LIS3DH_FIFO_CTRL_REG_DEF;     // FIFO Control Register
     lis3dh->fifo_src_reg    = LIS3DH_FIFO_SRC_REG_DEF;      // FIFO Source Register
+
     lis3dh->int1_cfg        = LIS3DH_INT1_CFG_DEF;          // Interrupt Configuration Register
     lis3dh->int1_src        = LIS3DH_INT1_SRC_DEF;          // Interrupt Source Register
     lis3dh->int1_ths        = LIS3DH_INT1_THS_DEF;          // Interrupt Threshold Register
     lis3dh->int1_duration   = LIS3DH_INT1_DURATION_DEF;     // Interrupt Duration Register
+
     lis3dh->int2_cfg        = LIS3DH_INT2_CFG_DEF;          //
     lis3dh->int2_src        = LIS3DH_INT2_SRC_DEF;          //
     lis3dh->int2_ths        = LIS3DH_INT2_THS_DEF;          //
     lis3dh->int2_duration   = LIS3DH_INT2_DURATION_DEF;     //       
+
     lis3dh->click_cfg       = LIS3DH_CLICK_CFG_DEF;         // Interrupt Click Recognition Register
     lis3dh->click_src       = LIS3DH_CLICK_SRC_DEF;         // Interrupt Click Source Register
     lis3dh->click_ths       = LIS3DH_CLICK_THS_DEF;         // Interrupt Click Threshold Register
+
     lis3dh->time_limit      = LIS3DH_TIME_LIMIT_DEF;        // Click Time Limit Register
     lis3dh->time_latency    = LIS3DH_TIME_LATENCY_DEF;      // Click Time Latency Register
     lis3dh->time_window     = LIS3DH_TIME_WINDOW_DEF;       // Click Time Window Register
+
     lis3dh->act_ths         = LIS3DH_ACT_THS_DEF;           //
     lis3dh->act_dur         = LIS3DH_ACT_DUR_DEF;           //
 }
@@ -657,7 +741,16 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
 	lis3dh->ptr             = 0xFF;
 	lis3dh->auto_increment  = false;
 	lis3dh->address_phase   = false;
-   
+
+    lis3dh->config = (lis3dh_config_t*)g_malloc(sizeof(lis3dh_config_t));
+
+    lis3dh->config->fscale  = LIS3DH_FS_2G;
+    lis3dh->config->mode    = LIS3DH_MODE_NORMAL;
+    lis3dh->config->odr     = LIS3DH_ODR_100;
+    lis3dh->config->temp_enable         = false;
+    lis3dh->config->high_pass_filter    = false;
+    lis3dh->config->fifo_enabled        = false;
+
     /* Reset registers */
     lis3dh_reset_registers(lis3dh);
 
