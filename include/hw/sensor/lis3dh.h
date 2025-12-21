@@ -309,11 +309,7 @@ typedef struct LIS3DHState
     /* Parent object */
     I2CSlave i2c;
 
-    uint8_t address;       // 7-bit I2C address
-	uint8_t ptr;           // Current register pointer
-	bool auto_increment;   // Auto-advance pointer after access
-	bool address_phase;    // I2C command phase tracker
-    
+    lis3dh_i2c_params_t i2c_params;    
     lis3dh_config_t *config;
     lis3dh_params_t *params;
     

@@ -620,12 +620,11 @@ static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
 
 static uint8_t lis3dh_read_register( LIS3DHState *src )
 {
-    
-    printf("\n\n LIS3DH read ptr: 0x%x", src->ptr);
+    SENSOR_LIS3DH("reading from ptr: 0x%x", src->i2c_params.ptr);
     
     uint8_t ret = 0x00;
 
-    switch (src->ptr)
+    switch (src->i2c_params.ptr)
     {             
         CASE_READ_RETURN(ret, LIS3DH_ADDR_STATUS_REG_AUX, status_reg_aux)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC1_L, adc_1_l)
@@ -688,17 +687,18 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
         case I2C_START_SEND:    // Start of write operation
             /* Master is starting a WRITE operation 
             (sending data to the device) */
-            lis3dh->ptr             = 0xFF;
-			lis3dh->auto_increment  = false;
-			lis3dh->address_phase   = true;
+            lis3dh->i2c_params.ptr             = 0xFF;
+			lis3dh->i2c_params.auto_increment  = false;
+			lis3dh->i2c_params.address_phase   = true;
             break;
             
         case I2C_START_RECV:    // Start of read operation
             /* Master is starting a READ operation 
             (requesting data from the device) */
-			if (lis3dh->ptr == 0xFF)
-				lis3dh->ptr = LIS3DH_ADDR_WHO_AM_I;
-			lis3dh->address_phase = false;
+			if (lis3dh->i2c_params.ptr == 0xFF)
+				lis3dh->i2c_params.ptr = LIS3DH_ADDR_WHO_AM_I;
+
+			lis3dh->i2c_params.address_phase = false;
             break;
             
         case I2C_FINISH:        // Stop condition
@@ -721,16 +721,16 @@ static int lis3dh_i2c_send(I2CSlave *i2c, uint8_t data)
 {
     LIS3DHState *lis3dh = LIS3DH(i2c);
 
-	if (lis3dh->ptr == 0xFF && lis3dh->address_phase)
+	if (lis3dh->i2c_params.ptr == 0xFF && lis3dh->i2c_params.address_phase)
 	{
-		lis3dh->ptr = data & LIS3DH_SUB_REG_MASK;
-		lis3dh->auto_increment =  (data & LIS3DH_SUB_AUTO_INC_MASK) != 0x00 ? true : false;
-		lis3dh->address_phase = false;
+		lis3dh->i2c_params.ptr = data & LIS3DH_SUB_REG_MASK;
+		lis3dh->i2c_params.auto_increment =  (data & LIS3DH_SUB_AUTO_INC_MASK) != 0x00 ? true : false;
+		lis3dh->i2c_params.address_phase = false;
 	}else
 	{
-		lis3dh_write_register( lis3dh, lis3dh->ptr, data);
-		if (lis3dh->auto_increment)
-			lis3dh->ptr++;
+		lis3dh_write_register( lis3dh, lis3dh->i2c_params.ptr, data);
+		if (lis3dh->i2c_params.auto_increment)
+			lis3dh->i2c_params.ptr++;
 	}
 	return 0;
 }
@@ -741,11 +741,11 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 
     uint8_t value = lis3dh_read_register( lis3dh );
 
-    if (lis3dh->auto_increment)
+    if (lis3dh->i2c_params.auto_increment)
     {
-        lis3dh->ptr++;
+        lis3dh->i2c_params.ptr++;
     }
-    
+
 	return value;
 }
 
@@ -815,10 +815,10 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
     LIS3DHState *lis3dh = LIS3DH(dev);
     
     /* Initialize I2C state */
-    lis3dh->address         = LIS3DH_DEFAULT_ADDRESS;
-	lis3dh->ptr             = 0xFF;
-	lis3dh->auto_increment  = false;
-	lis3dh->address_phase   = false;
+    lis3dh->i2c_params.address         = LIS3DH_DEFAULT_ADDRESS;
+	lis3dh->i2c_params.ptr             = 0xFF;
+	lis3dh->i2c_params.auto_increment  = false;
+	lis3dh->i2c_params.address_phase   = false;
 
     lis3dh->config = (lis3dh_config_t*)g_malloc(sizeof(lis3dh_config_t));
 

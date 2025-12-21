@@ -152,4 +152,18 @@ typedef struct lis3dh_params_s
     int8_t acc_shifts;      /**< number of shift for the raw_data in the mode */
 }lis3dh_params_t;
 
+/**
+ * @struct lis3dh_i2c_params_s
+ * @brief Internal parameters used in the internall I2C logic
+ * 
+ * lis3dh_config_t type variable
+ */
+typedef struct lis3dh_i2c_params_s
+{
+    uint8_t address;       /**< 7-bit I2C address */
+	uint8_t ptr;           /**< Current register pointer */
+	bool auto_increment;   /**< Auto-advance pointer after access */
+	bool address_phase;    /**< I2C command phase tracker */
+}lis3dh_i2c_params_t;
+
 #endif /* INC_LIS3DH_TYPES_H_ */
