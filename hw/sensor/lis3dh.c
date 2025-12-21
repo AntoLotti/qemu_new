@@ -733,7 +733,6 @@ static void lis3dh_reset_registers(LIS3DHState *lis3dh)
 
 static void lis3dh_realize(DeviceState *dev, Error **errp)
 {
-    printf("QEMU LIS3DH realize\n");
     LIS3DHState *lis3dh = LIS3DH(dev);
     
     /* Initialize I2C state */
@@ -758,8 +757,9 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
 
 static void lis3dh_unrealize(DeviceState *dev)
 {
-    //LIS3DHState *lis3dh = LIS3DH(dev);
-    (void)dev;
+    LIS3DHState *lis3dh = LIS3DH(dev);
+    
+    g_free(lis3dh->config);
 }
 
 static void lis3dh_initfn(Object *obj)
