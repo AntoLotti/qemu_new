@@ -129,7 +129,7 @@ typedef enum lis3dh_fscale_e
  */
 typedef struct lis3dh_config_s
 {
-    lis3dh_fscale_t fscale; /**< Full Scale Range   */
+    lis3dh_fscale_t fscale; /**< Full Scale Range (Measurement range)   */
     lis3dh_mode_t   mode;   /**< Operating Mode     */
     lis3dh_odr_t    odr;    /**< Output Data Rate   */
     bool temp_enable;       /**< Enable Temperature Sensor */

@@ -259,14 +259,22 @@
 #define LIS3DH_SUB_REG_MASK             0x7F                    // Mask to get the LIS3DH register direcction
 #define LIS3DH_SUB_AUTO_INC_MASK        0x80                    // Mask to get the Auto-increment bit
 
-#define LIS3DH_ACCELERATION_CONST   (9.81f) // Gravity constant (m/s²)
-
-#define LIS3DH_HIGH_MODE_MAX    (int16_t)(2047)     //
-#define LIS3DH_HIGH_MODE_MIN    (int16_t)(-2048)    //
-
+#define LIS3DH_ACCEL_CONST    (9.81f)   // Gravity constant (m/s²)
 
 #define LIS3DH_TEMP_MAX    -40  // MIN Value for the temperature sensor
 #define LIS3DH_TEMP_MIN     85  // MAX Value for the temperature sensor
+
+#define LIS3DH_MAX_2G_RANGE      2000   // Acc MAX value (in mg) when FS = 2 
+#define LIS3DH_MIN_2G_RANGE     -2000   // Acc MIN value (in mg) when FS = 2 
+
+#define LIS3DH_MAX_4G_RANGE      4000   // Acc MAX value (in mg) when FS = 4
+#define LIS3DH_MIN_4G_RANGE     -4000   // Acc MIN value (in mg) when FS = 4
+
+#define LIS3DH_MAX_8G_RANGE      8000   // Acc MAX value (in mg) when FS = 8
+#define LIS3DH_MIN_8G_RANGE     -8000   // Acc MIN value (in mg) when FS = 8
+
+#define LIS3DH_MAX_16G_RANGE     16000  // Acc MAX value (in mg) when FS = 16
+#define LIS3DH_MIN_16G_RANGE    -16000  // Acc MIN value (in mg) when FS = 16
 
 
 #define LIS3DH_So_HIG_RES_2G    1.0f	// mg/LSB or mg/digit
@@ -285,9 +293,6 @@
 #define LIS3DH_So_LOW_POWER_16G 192.0f  // mg/LSB or mg/digit
 
 
-/**************************************************************************
-    PRIVET MACROS
-**************************************************************************/
 #define CASE_READ_RETURN(VAL, REG, FIELD)   case REG: VAL = (src->FIELD); break;
 
 /**************************************************************************
@@ -308,8 +313,12 @@ typedef struct LIS3DHState
 	uint8_t ptr;           // Current register pointer
 	bool auto_increment;   // Auto-advance pointer after access
 	bool address_phase;    // I2C command phase tracker
-    lis3dh_config_t *config;         /**< Peripheral configuration       */
-    float So;			    /**< Sensitivity */
+    
+    lis3dh_config_t *config;    /**< Peripheral configuration       */
+    float So;			        /**< Sensitivity */
+    int64_t acc_max_range;
+    int64_t acc_min_range;
+    int8_t acc_shifts;
     
     qemu_irq int1;                    /* Interrupt 1 line to STM32 */
     qemu_irq int2;                    /* Interrupt 2 line to STM32 */
