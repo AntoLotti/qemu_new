@@ -500,32 +500,32 @@ static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
     
     switch (dir)
     {
-        case LIS3DH_REG_CTRL_REG0:          lis3dh_write_ctr_reg0(dst, data); return true; break;
-        case LIS3DH_REG_ACCEL_CTRL_REG1:    lis3dh_write_ctr_reg1(dst, data);  return true; break;
-        case LIS3DH_REG_ACCEL_CTRL_REG2:    lis3dh_write_ctr_reg2(dst, data);  return true; break;
-        case LIS3DH_REG_ACCEL_CTRL_REG3:    lis3dh_write_ctr_reg3(dst, data);  return true; break;
-        case LIS3DH_REG_ACCEL_CTRL_REG4:    lis3dh_write_ctr_reg4(dst, data);  return true; break;
-        case LIS3DH_REG_ACCEL_CTRL_REG5:    lis3dh_write_ctr_reg5(dst, data);  return true; break;
-        case LIS3DH_REG_ACCEL_CTRL_REG6:    lis3dh_write_ctr_reg6(dst, data);  return true; break;
+        case LIS3DH_ADDR_CTRL_REG0:     lis3dh_write_ctr_reg0(dst, data); return true; break;
+        case LIS3DH_ADDR_CTRL_REG1:     lis3dh_write_ctr_reg1(dst, data);  return true; break;
+        case LIS3DH_ADDR_CTRL_REG2:     lis3dh_write_ctr_reg2(dst, data);  return true; break;
+        case LIS3DH_ADDR_CTRL_REG3:     lis3dh_write_ctr_reg3(dst, data);  return true; break;
+        case LIS3DH_ADDR_CTRL_REG4:     lis3dh_write_ctr_reg4(dst, data);  return true; break;
+        case LIS3DH_ADDR_CTRL_REG5:     lis3dh_write_ctr_reg5(dst, data);  return true; break;
+        case LIS3DH_ADDR_CTRL_REG6:     lis3dh_write_ctr_reg6(dst, data);  return true; break;
 
-        case LIS3DH_REG_ACCEL_REFERENCE:    dst->reference = data;  return true; break;
-        case LIS3DH_REG_ACCEL_FIFO_CTRL:    dst->fifo_ctrl_reg = data;  return true; break;
-        case LIS3DH_REG_ACCEL_INT1_CFG:     dst->int1_cfg = data;  return true; break;
-        case LIS3DH_REG_ACCEL_INT1_THS:     dst->int1_ths = data;  return true; break;
-        case LIS3DH_REG_ACCEL_INT1_DURATION:     dst->int1_duration = data;  return true; break;
+        case LIS3DH_ADDR_REFERENCE:     dst->reference = data;      return true; break;
+        case LIS3DH_ADDR_FIFO_CTRL:     dst->fifo_ctrl_reg = data;  return true; break;
+        case LIS3DH_ADDR_INT1_CFG:      dst->int1_cfg = data;       return true; break;
+        case LIS3DH_ADDR_INT1_THS:      dst->int1_ths = data;       return true; break;
+        case LIS3DH_ADDR_INT1_DURATION: dst->int1_duration = data;  return true; break;
 
-        case LIS3DH_REG_ACCEL_INT2_CFG:     dst->int2_cfg = data;  return true; break;
-        case LIS3DH_REG_ACCEL_INT2_THS:     dst->int2_ths = data;  return true; break;
-        case LIS3DH_REG_ACCEL_INT2_DURATION:     dst->int2_duration = data;  return true; break;
+        case LIS3DH_ADDR_INT2_CFG:      dst->int2_cfg = data;       return true; break;
+        case LIS3DH_ADDR_INT2_THS:      dst->int2_ths = data;       return true; break;
+        case LIS3DH_ADDR_INT2_DURATION: dst->int2_duration = data;  return true; break;
 
-        case LIS3DH_REG_ACCEL_CLICK_CFG:    dst->click_cfg = data;      return true; break;
-        case LIS3DH_REG_ACCEL_CLICK_THS:    dst->click_ths = data;      return true; break;
-        case LIS3DH_REG_ACCEL_TIME_LIMIT:   dst->time_limit = data;     return true; break;
-        case LIS3DH_REG_ACCEL_TIME_LATENCY: dst->time_latency = data;   return true; break;
-        case LIS3DH_REG_ACCEL_TIME_WINDOW:  dst->time_window = data;    return true; break;
+        case LIS3DH_ADDR_CLICK_CFG:     dst->click_cfg = data;      return true; break;
+        case LIS3DH_ADDR_CLICK_THS:     dst->click_ths = data;      return true; break;
+        case LIS3DH_ADDR_TIME_LIMIT:    dst->time_limit = data;     return true; break;
+        case LIS3DH_ADDR_TIME_LATENCY:  dst->time_latency = data;   return true; break;
+        case LIS3DH_ADDR_TIME_WINDOW:   dst->time_window = data;    return true; break;
 
-        case LIS3DH_ACT_THS: dst->act_ths = data;   return true; break;
-        case LIS3DH_ACT_DUR:  dst->act_dur = data;    return true; break;
+        case LIS3DH_ADDR_ACT_THS:       dst->act_ths = data;        return true; break;
+        case LIS3DH_ADDR_ACT_DUR:       dst->act_dur = data;        return true; break;
 
         default:
             /**
@@ -548,48 +548,48 @@ static uint8_t lis3dh_read_register( LIS3DHState *src )
 
     switch (src->ptr)
     {             
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_STATUS_REG_AUX, status_reg_aux)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC1_L, adc_1_l)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC1_H, adc_1_h)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC2_L, adc_2_l)        
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC2_H, adc_2_h)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC3_L, adc_3_l)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_ADC3_H, adc_3_h)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_WHO_AM_I, who_am_i)
-        CASE_READ_RETURN(ret, LIS3DH_REG_CTRL_REG0, ctrl_reg0)
-        CASE_READ_RETURN(ret, LIS3DH_REG_TEMP_CFG_REG, temp_cfg_reg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG1, ctrl_reg1)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG2, ctrl_reg2)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG3, ctrl_reg3)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG4, ctrl_reg4)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG5, ctrl_reg5)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CTRL_REG6, ctrl_reg6)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_REFERENCE, reference)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_STATUS_REG, status_reg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_X_L, out_x_l)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_X_H, out_x_h)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Y_L, out_y_l)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Y_H, out_y_h)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Z_L, out_z_l)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_OUT_Z_H, out_z_h)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_FIFO_CTRL, fifo_ctrl_reg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_FIFO_SRC, fifo_src_reg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_CFG, int1_cfg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_SRC, int1_src)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_THS, int1_ths)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT1_DURATION, int1_duration)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_CFG, int2_cfg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_SRC, int2_src)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_THS, int2_ths)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_INT2_DURATION, int2_duration)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CLICK_CFG, click_cfg)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CLICK_SRC, click_src)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_CLICK_THS, click_ths)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_TIME_LIMIT, time_limit)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_TIME_LATENCY, time_latency)
-        CASE_READ_RETURN(ret, LIS3DH_REG_ACCEL_TIME_WINDOW, time_window)
-        CASE_READ_RETURN(ret, LIS3DH_ACT_THS, act_ths)
-        CASE_READ_RETURN(ret, LIS3DH_ACT_DUR, act_dur)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_STATUS_REG_AUX, status_reg_aux)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC1_L, adc_1_l)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC1_H, adc_1_h)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC2_L, adc_2_l)        
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC2_H, adc_2_h)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC3_L, adc_3_l)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_ADC3_H, adc_3_h)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_WHO_AM_I, who_am_i)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG0 , ctrl_reg0)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_TEMP_CFG_REG, temp_cfg_reg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG1, ctrl_reg1)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG2, ctrl_reg2)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG3, ctrl_reg3)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG4, ctrl_reg4)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG5, ctrl_reg5)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG6, ctrl_reg6)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_REFERENCE, reference)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_STATUS_REG, status_reg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_X_L, out_x_l)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_X_H, out_x_h)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Y_L, out_y_l)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Y_H, out_y_h)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Z_L, out_z_l)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Z_H, out_z_h)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_FIFO_CTRL, fifo_ctrl_reg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_FIFO_SRC, fifo_src_reg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_CFG, int1_cfg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_SRC, int1_src)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_THS, int1_ths)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_DURATION, int1_duration)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_CFG, int2_cfg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_SRC, int2_src)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_THS, int2_ths)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_DURATION, int2_duration)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CLICK_CFG, click_cfg)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CLICK_SRC, click_src)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_CLICK_THS, click_ths)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_TIME_LIMIT, time_limit)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_TIME_LATENCY, time_latency)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_TIME_WINDOW, time_window)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_ACT_THS, act_ths)
+        CASE_READ_RETURN(ret, LIS3DH_ADDR_ACT_DUR, act_dur)
 
         default:
             //#TODO print error message
@@ -618,7 +618,7 @@ static int lis3dh_i2c_event(I2CSlave *i2c, enum i2c_event event)
             /* Master is starting a READ operation 
             (requesting data from the device) */
 			if (lis3dh->ptr == 0xFF)
-				lis3dh->ptr = LIS3DH_REG_ACCEL_WHO_AM_I;
+				lis3dh->ptr = LIS3DH_ADDR_WHO_AM_I;
 			lis3dh->address_phase = false;
             break;
             
