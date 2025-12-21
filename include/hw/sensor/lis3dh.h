@@ -314,11 +314,8 @@ typedef struct LIS3DHState
 	bool auto_increment;   // Auto-advance pointer after access
 	bool address_phase;    // I2C command phase tracker
     
-    lis3dh_config_t *config;    /**< Peripheral configuration       */
-    float So;			        /**< Sensitivity */
-    int64_t acc_max_range;
-    int64_t acc_min_range;
-    int8_t acc_shifts;
+    lis3dh_config_t *config;
+    lis3dh_params_t *params;
     
     qemu_irq int1;                    /* Interrupt 1 line to STM32 */
     qemu_irq int2;                    /* Interrupt 2 line to STM32 */

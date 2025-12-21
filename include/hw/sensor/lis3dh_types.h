@@ -137,5 +137,19 @@ typedef struct lis3dh_config_s
     bool fifo_enabled;      /**< Enable FIFO        */
 }lis3dh_config_t;
 
+/**
+ * @struct lis3dh_acc_params_s
+ * @brief Internal Parameters
+ * 
+ * Its values are setted up depending of a
+ * lis3dh_config_t type variable
+ */
+typedef struct lis3dh_params_s
+{
+    float acc_So;	        /**< Sensitivity of the current mode and fscale*/
+    int64_t acc_max_range;  /**< max acceleration in the current mode */
+    int64_t acc_min_range;  /**< min acceleration in the current mode */
+    int8_t acc_shifts;      /**< number of shift for the raw_data in the mode */
+}lis3dh_params_t;
 
 #endif /* INC_LIS3DH_TYPES_H_ */

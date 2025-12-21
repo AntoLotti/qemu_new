@@ -68,7 +68,7 @@ static void lis3dh_set_So(LIS3DHState *src)
             break;
     }
 
-    src->So = So;
+    src->params->acc_So = So;
 }
 
 static void lis3dh_set_acc_range(LIS3DHState *src)
@@ -76,28 +76,28 @@ static void lis3dh_set_acc_range(LIS3DHState *src)
     switch (src->config->fscale)
     {
         case LIS3DH_FS_2G:
-            src->acc_max_range = LIS3DH_MAX_2G_RANGE;
-            src->acc_min_range = LIS3DH_MIN_2G_RANGE;
+            src->params->acc_max_range = LIS3DH_MAX_2G_RANGE;
+            src->params->acc_min_range = LIS3DH_MIN_2G_RANGE;
         break;
     
         case LIS3DH_FS_4G:
-            src->acc_max_range = LIS3DH_MAX_4G_RANGE;
-            src->acc_min_range = LIS3DH_MIN_4G_RANGE;
+            src->params->acc_max_range = LIS3DH_MAX_4G_RANGE;
+            src->params->acc_min_range = LIS3DH_MIN_4G_RANGE;
         break;
 
         case LIS3DH_FS_8G:
-            src->acc_max_range = LIS3DH_MAX_8G_RANGE;
-            src->acc_min_range = LIS3DH_MIN_8G_RANGE;
+            src->params->acc_max_range = LIS3DH_MAX_8G_RANGE;
+            src->params->acc_min_range = LIS3DH_MIN_8G_RANGE;
         break;
 
         case LIS3DH_FS_16G:
-            src->acc_max_range = LIS3DH_MAX_16G_RANGE;
-            src->acc_min_range = LIS3DH_MIN_16G_RANGE;
+            src->params->acc_max_range = LIS3DH_MAX_16G_RANGE;
+            src->params->acc_min_range = LIS3DH_MIN_16G_RANGE;
         break;
 
         default:
-            src->acc_max_range = LIS3DH_MAX_2G_RANGE;
-            src->acc_min_range = LIS3DH_MIN_2G_RANGE;
+            src->params->acc_max_range = LIS3DH_MAX_2G_RANGE;
+            src->params->acc_min_range = LIS3DH_MIN_2G_RANGE;
         break;
     }
 }
@@ -107,16 +107,16 @@ static void lis3dh_set_acc_shifts(LIS3DHState *src)
     switch (src->config->mode)
     {        
         case LIS3DH_MODE_HIGH_RES:
-            src->acc_shifts = 4;
+            src->params->acc_shifts = 4;
         break;
         
         case LIS3DH_MODE_LOW_POWER:
-            src->acc_shifts = 8;
+            src->params->acc_shifts = 8;
         break;
         
         case LIS3DH_MODE_NORMAL:
         default:
-            src->acc_shifts = 6;
+            src->params->acc_shifts = 6;
         break;
     }
 }
@@ -224,7 +224,7 @@ static int16_t lis3dh_get_acc_raw_data(LIS3DHState *src, float data)
     int16_t raw_data = 0x0000;
 
     /* Convert acceleration to sensor LSB format */
-    float data_with_So = data / src->So;
+    float data_with_So = data / src->params->acc_So;
 
     /* Handle rounding */
     bool is_pos = (data_with_So >= 0);
@@ -236,7 +236,7 @@ static int16_t lis3dh_get_acc_raw_data(LIS3DHState *src, float data)
         data_in_16b = (int16_t)data_with_So;
 
     /* Shift the data depending of the mode */
-    raw_data = data_in_16b << src->acc_shifts;
+    raw_data = data_in_16b << src->params->acc_shifts;
     SENSOR_LIS3DH("Accel updated - value:%.3fg raw:0x%04x", data, raw_data);
     
     return raw_data;
@@ -253,7 +253,7 @@ static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *
     int64_t value = 0;
     visit_type_int(v, name, &value, errp);
 
-    if(value < s->acc_min_range || value > s->acc_max_range)
+    if(value < s->params->acc_min_range || value > s->params->acc_max_range)
     {
        /** TODO: qemu error line */
        value = 0;
@@ -286,7 +286,7 @@ static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *
     int64_t value = 0;
     visit_type_int(v, name, &value, errp);
 
-    if(value < s->acc_min_range || value > s->acc_max_range)
+    if(value < s->params->acc_min_range || value > s->params->acc_max_range)
     {
        /** TODO: qemu error line */
        value = 0;
@@ -319,7 +319,7 @@ static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *
     int64_t value = 0;
     visit_type_int(v, name, &value, errp);
 
-    if(value < s->acc_min_range || value > s->acc_max_range)
+    if(value < s->params->acc_min_range || value > s->params->acc_max_range)
     {
        /** TODO: qemu error line */
        value = 0;
@@ -349,7 +349,7 @@ static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *
         return;
 
     int16_t raw = ((int16_t)s->out_x_h << 8) | s->out_x_l;
-    int64_t value = (int64_t)((raw >> s->acc_shifts) * (s->So));
+    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_So));
 
     visit_type_int(v, name, &value, errp);
 }
@@ -361,7 +361,7 @@ static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *
         return;
 
     int16_t raw = ((int16_t)s->out_y_h << 8) | s->out_y_l;
-    int64_t value = (int64_t)((raw >> s->acc_shifts) * (s->So));
+    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_So));
 
     visit_type_int(v, name, &value, errp);
 }
@@ -373,7 +373,7 @@ static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *
         return;
 
     int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
-    int64_t value = (int64_t)((raw >> s->acc_shifts) * (s->So));
+    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_So));
 
     visit_type_int(v, name, &value, errp);
 }
@@ -829,6 +829,8 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
     lis3dh->config->high_pass_filter    = false;
     lis3dh->config->fifo_enabled        = false;
 
+    lis3dh->params = (lis3dh_params_t*)g_malloc(sizeof(lis3dh_params_t));
+
     lis3dh_set_So(lis3dh);
     lis3dh_set_acc_range(lis3dh);
     lis3dh_set_acc_shifts(lis3dh);
@@ -843,6 +845,7 @@ static void lis3dh_unrealize(DeviceState *dev)
     LIS3DHState *lis3dh = LIS3DH(dev);
     
     g_free(lis3dh->config);
+    g_free(lis3dh->params);
 }
 
 static void lis3dh_initfn(Object *obj)
