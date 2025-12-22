@@ -28,47 +28,63 @@
 
 static void lis3dh_set_So(LIS3DHState *src)
 {
-    float So = 0.0f;
-
     switch (src->config->mode)
     {
         case LIS3DH_MODE_HIGH_RES:  // 12-bit
             switch (src->config->fscale)
             {
-                case LIS3DH_FS_2G:  So = LIS3DH_So_HIG_RES_2G;	break;
-                case LIS3DH_FS_4G:  So = LIS3DH_So_HIG_RES_4G;	break;
-                case LIS3DH_FS_8G:  So = LIS3DH_So_HIG_RES_8G;	break;
-                case LIS3DH_FS_16G: So = LIS3DH_So_HIG_RES_16G;	break;
+                case LIS3DH_FS_2G:  src->params->acc_So = LIS3DH_So_HIG_RES_2G;	 return; break;
+                case LIS3DH_FS_4G:  src->params->acc_So = LIS3DH_So_HIG_RES_4G;	 return; break;
+                case LIS3DH_FS_8G:  src->params->acc_So = LIS3DH_So_HIG_RES_8G;	 return; break;
+                case LIS3DH_FS_16G: src->params->acc_So = LIS3DH_So_HIG_RES_16G; return; break;
+                default:
+                    src->params->acc_So = 4.0f; // Default: normal ±2g
+                    qemu_log_mask(LOG_GUEST_ERROR,
+                        "%s: The FS: 0x%02x does not exist for this operating mode, So setted default value ±2g, So: %.2f\n",
+                        __func__, src->config->fscale, src->params->acc_So);
+                break;
             }
             break;
 
         case LIS3DH_MODE_NORMAL:  // 10-bit
             switch (src->config->fscale)
             {
-                case LIS3DH_FS_2G:  So = LIS3DH_So_NORMAL_2G;	break;
-                case LIS3DH_FS_4G:  So = LIS3DH_So_NORMAL_4G;   break;
-                case LIS3DH_FS_8G:  So = LIS3DH_So_NORMAL_8G;  	break;
-                case LIS3DH_FS_16G: So = LIS3DH_So_NORMAL_16G;  break;
+                case LIS3DH_FS_2G:  src->params->acc_So = LIS3DH_So_NORMAL_2G;  return; break;
+                case LIS3DH_FS_4G:  src->params->acc_So = LIS3DH_So_NORMAL_4G;  return; break;
+                case LIS3DH_FS_8G:  src->params->acc_So = LIS3DH_So_NORMAL_8G;  return; break;
+                case LIS3DH_FS_16G: src->params->acc_So = LIS3DH_So_NORMAL_16G; return; break;
+                default:
+                    src->params->acc_So = 4.0f; // Default: normal ±2g
+                    qemu_log_mask(LOG_GUEST_ERROR,
+                        "%s: The FS: 0x%02x does not exist for this operating mode, So setted default value ±2g, So: %.2f\n",
+                        __func__, src->config->fscale, src->params->acc_So);
+                break;
             }
             break;
 
         case LIS3DH_MODE_LOW_POWER:  // 8-bit
             switch (src->config->fscale)
             {
-                case LIS3DH_FS_2G:  So = LIS3DH_So_LOW_POWER_2G;  break;
-                case LIS3DH_FS_4G:  So = LIS3DH_So_LOW_POWER_4G;  break;
-                case LIS3DH_FS_8G:  So = LIS3DH_So_LOW_POWER_8G;  break;
-                case LIS3DH_FS_16G: So = LIS3DH_So_LOW_POWER_16G; break;
+                case LIS3DH_FS_2G:  src->params->acc_So = LIS3DH_So_LOW_POWER_2G;  return; break;
+                case LIS3DH_FS_4G:  src->params->acc_So = LIS3DH_So_LOW_POWER_4G;  return; break;
+                case LIS3DH_FS_8G:  src->params->acc_So = LIS3DH_So_LOW_POWER_8G;  return; break;
+                case LIS3DH_FS_16G: src->params->acc_So = LIS3DH_So_LOW_POWER_16G; return; break;
+                default:
+                    src->params->acc_So = 4.0f; // Default: normal ±2g
+                    qemu_log_mask(LOG_GUEST_ERROR,
+                        "%s: The FS: 0x%02x does not exist for this operating mode, So setted default value ±2g, So: %.2f\n",
+                        __func__, src->config->fscale, src->params->acc_So);
+                break;
             }
             break;
 
         default:
-            So = 4.0f; // Default: normal ±2g
-            SENSOR_LIS3DH("- ERROR - So set to ±2g");
+            src->params->acc_So = 4.0f; // Default: normal ±2g
+            qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: The operating mode 0x%02x does not exist, So setted to the default value ±2g, So: %.2f\n",
+                      __func__, src->config->mode, src->params->acc_So);
             break;
     }
-
-    src->params->acc_So = So;
 }
 
 static void lis3dh_set_acc_range(LIS3DHState *src)
@@ -106,15 +122,9 @@ static void lis3dh_set_acc_shifts(LIS3DHState *src)
 {
     switch (src->config->mode)
     {        
-        case LIS3DH_MODE_HIGH_RES:
-            src->params->acc_shifts = 4;
-        break;
-        
-        case LIS3DH_MODE_LOW_POWER:
-            src->params->acc_shifts = 8;
-        break;
-        
-        case LIS3DH_MODE_NORMAL:
+        case LIS3DH_MODE_HIGH_RES:  src->params->acc_shifts = 4;    break;
+        case LIS3DH_MODE_LOW_POWER: src->params->acc_shifts = 8;    break;
+        case LIS3DH_MODE_NORMAL:    src->params->acc_shifts = 6;    break;
         default:
             src->params->acc_shifts = 6;
         break;
@@ -134,17 +144,15 @@ static void lis3dh_set_operating_mode(LIS3DHState *src)
         
         if (mode > LIS3DH_MODE_NOT_ALLOWED)
         {
-            mode = LIS3DH_MODE_NORMAL;
             src->ctrl_reg1 &= ~LIS3DH_CTRL_REG1_BIT_LPEN;
             src->ctrl_reg4 &= ~LIS3DH_CTRL_REG4_BIT_HR;
-            SENSOR_LIS3DH("- ERROR - mode set to NORMAL");
+            qemu_log_mask(LOG_GUEST_ERROR,
+                "%s: The operating mode 0x%02x does not exist, setted to normal mode: 0x%02x\n",
+                      __func__, mode, LIS3DH_MODE_NORMAL);
+            mode = LIS3DH_MODE_NORMAL;
         }
     }
     
-    /**
-     * TODO: print error
-     */
-
     src->config->mode = mode;
     lis3dh_set_So(src);
     lis3dh_set_acc_shifts(src);
@@ -156,69 +164,34 @@ static void lis3dh_set_odr(LIS3DHState *src)
     
     if( odr < LIS3DH_ODR_POWER_DOWN || odr > LIS3DH_ODR_1250 )
     {
+        qemu_log_mask(LOG_GUEST_ERROR,
+            "%s: The ODR: 0x%02x does not exist, setted to LIS3DH_ODR_POWER_DOWN: %d\n",
+            __func__, odr, LIS3DH_ODR_POWER_DOWN);
+    
         odr = LIS3DH_ODR_POWER_DOWN;
         
         uint8_t ctrl_reg1 = src->ctrl_reg1;
         ctrl_reg1 &= ~LIS3DH_CTRL_REG1_BITS_ODR;
         src->ctrl_reg1 = ctrl_reg1 | (((uint8_t)(LIS3DH_ODR_POWER_DOWN)) << 4);
-
-        SENSOR_LIS3DH("- ERROR - odr set to LIS3DH_ODR_POWER_DOWN");
     }
-
-    /**
-     * TODO: print error
-     */
 
     src->config->odr = odr;
 }
 
 static void lis3dh_set_fscale(LIS3DHState *src)
 {
-    lis3dh_fscale_t fscale = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4; // 00XX 0000 -> 0000 00XX
-
-#ifdef DEBUG_LIS3DH
-    switch (fscale)
-    {
-        case LIS3DH_FS_2G:
-            SENSOR_LIS3DH("FS set to LIS3DH_FS_2G");
-            break;
-
-        case LIS3DH_FS_4G:
-            SENSOR_LIS3DH("FS set to LIS3DH_FS_4G");
-            break;
-
-        case LIS3DH_FS_8G:
-            SENSOR_LIS3DH("FS set to LIS3DH_FS_8G");
-            break;
-
-        case LIS3DH_FS_16G:
-            SENSOR_LIS3DH("FS set to LIS3DH_FS_16G");
-            break;
-
-        default:
-            SENSOR_LIS3DH("- ERROR - FS set to LIS3DH_FS_2G");
-        break;
-    }
-#endif
+    lis3dh_fscale_t fscale = (src->ctrl_reg4 & LIS3DH_CTRL_REG4_BITS_FS) >> 4;
 
     if (fscale > LIS3DH_FS_16G)
-#if DEBUG_LIS3DH == 0
         fscale = LIS3DH_FS_2G;
-#else
-    {
-        fscale = LIS3DH_FS_2G;
-        SENSOR_LIS3DH("- ERROR - mode set to NORMAL");
-    }
-#endif
 
     src->config->fscale = fscale;
     lis3dh_set_acc_range(src);
     lis3dh_set_So(src);
 }
 
-/**************************************************************************
-    ACCELEROMETER DATA GENERATION
-**************************************************************************/
+/* ==================== DATA GENERATION ============================================== */
+
 static int16_t lis3dh_get_acc_raw_data(LIS3DHState *src, float data)
 {
     int16_t raw_data = 0x0000;
@@ -237,7 +210,6 @@ static int16_t lis3dh_get_acc_raw_data(LIS3DHState *src, float data)
 
     /* Shift the data depending of the mode */
     raw_data = data_in_16b << src->params->acc_shifts;
-    SENSOR_LIS3DH("Accel updated - value:%.3fg raw:0x%04x", data, raw_data);
     
     return raw_data;
 }
@@ -254,10 +226,7 @@ static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *
     visit_type_int(v, name, &value, errp);
 
     if(value < s->params->acc_min_range || value > s->params->acc_max_range)
-    {
-       /** TODO: qemu error line */
        value = 0;
-    }
 
     /* int64_t to float safe cast */
     float flt_value = 0.0;
@@ -287,10 +256,7 @@ static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *
     visit_type_int(v, name, &value, errp);
 
     if(value < s->params->acc_min_range || value > s->params->acc_max_range)
-    {
-       /** TODO: qemu error line */
        value = 0;
-    }
 
     /* int64_t to float safe cast */
     float flt_value = 0.0;
@@ -462,28 +428,7 @@ static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opa
     visit_type_int(v, name, &value, errp);
 }
 
-/**************************************************************************
-    I2C FUNCTIONS
-**************************************************************************/
-static bool lis3dh_address_reserved( uint8_t src)
-{
-    if ( src == 0x0E )
-        return true;
-
-    for ( uint8_t i = 0x00; i < 0x07; i++ )
-    {
-        if ( src == i )
-            return true;
-    }
-
-    for ( uint8_t j = 0x10; j < 0x1; j++ )
-    {
-        if ( src == j )
-            return true;
-    }
-
-    return false;
-}
+/* ==================== I2C FUNCTIONS ================================================ */
 
 static void lis3dh_write_ctr_reg0(LIS3DHState *dst, uint8_t data)
 {
@@ -559,10 +504,7 @@ static void lis3dh_write_ctr_reg6(LIS3DHState *dst, uint8_t data)
 }
 
 static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
-{
-    if ( lis3dh_address_reserved(dir) ) //#TODO print error message
-        return false;
-    
+{ 
     switch (dir)
     {
         case LIS3DH_ADDR_CTRL_REG0:     lis3dh_write_ctr_reg0(dst, data); return true; break;
@@ -594,9 +536,9 @@ static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
         case LIS3DH_ADDR_ACT_DUR:       dst->act_dur = data;        return true; break;
 
         default:
-            /**
-             * TODO: print error message
-             */
+            qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: writing to unsupported register: 0x%02x\n",
+                      __func__, dir);
             return false;
             break;
     }
@@ -607,8 +549,6 @@ static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
 
 static uint8_t lis3dh_read_register( LIS3DHState *src )
 {
-    SENSOR_LIS3DH("reading from ptr: 0x%x", src->i2c_params.ptr);
-    
     uint8_t ret = 0x00;
 
     switch (src->i2c_params.ptr)
@@ -657,9 +597,11 @@ static uint8_t lis3dh_read_register( LIS3DHState *src )
         CASE_READ_RETURN(ret, LIS3DH_ADDR_ACT_DUR, act_dur)
 
         default:
-            //#TODO print error message
+            qemu_log_mask(LOG_GUEST_ERROR,
+                      "%s: reading from unsupported register: 0x%02x\n",
+                      __func__, src->i2c_params.ptr);
             return false;
-            break;
+        break;
     }
 
     return ret;
@@ -736,9 +678,8 @@ static uint8_t lis3dh_i2c_recv(I2CSlave *i2c)
 	return value;
 }
 
-/**************************************************************************
-    LIS3DH REGISTRATION IN QEMU 
-**************************************************************************/
+/* ==================== LIS3DH IN QEMU =============================================== */
+
 static void lis3dh_reset_registers(LIS3DHState *lis3dh)
 {
     lis3dh->status_reg_aux  = LIS3DH_STATUS_REG_AUX_DEF;    // Status Register
@@ -854,7 +795,6 @@ static void lis3dh_initfn(Object *obj)
 /* LIS3DH class initialization */
 static void lis3dh_class_init( ObjectClass *kclass, void *data )
 {
-    printf("\n Qemu LIS3DH class init \n");
     DeviceClass *dc     = DEVICE_CLASS(kclass);     // The generic device class operations
     I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);  // The I2C-specific interface implementation
     
@@ -870,7 +810,7 @@ static void lis3dh_class_init( ObjectClass *kclass, void *data )
     k->recv     = lis3dh_i2c_recv;                  // Master reads from device
 }
 
-/* Tells QEMU’s type system how to create and wire the LIS3DH object class. */
+/* Creation the LIS3DH object class. */
 static const TypeInfo lis3dh_i2c_info = 
 {
     .name           = TYPE_LIS3DH, 
