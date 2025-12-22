@@ -379,7 +379,7 @@ static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *
 }
 
 
-static bool lis3dh_temp_condition_enable(LIS3DHState *src)
+static bool lis3dh_temp_enable(LIS3DHState *src)
 {
     return
     (
@@ -389,55 +389,18 @@ static bool lis3dh_temp_condition_enable(LIS3DHState *src)
     );
 }
 
-static void lis3dh_temp_set_data(LIS3DHState *src, int64_t data)
-{
-
-    if ( data < LIS3DH_TEMP_MIN || data > LIS3DH_TEMP_MAX )
-    {
-        return;
-        /**
-        * TODO:
-        * Error handler
-        */
-    }
-    
-    /** 
-     * intput -40ºC
-     * value = -40 
-     * Value = 0xFFFF FFFF FFFF FFD8 
-     * value = 1 ...... 1111 1111  1101 1000  
-     */
-
-    /* I assume a factory calibration point of 25ºC for an output of 0 */
-    /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
-    
-    /**
-     * data * 1 LSB/ºC
-     * raw = (-40.0) - 25.0 = -65.0ºC = 1111 1111  1011 1111
-     * Because output of 10bits and left justified
-     * raw << 6 = 1111 1111  1011 1111 << 6 =  1111 1110 1111 11000
-     */
-    
-    int16_t raw = ((int16_t)(data - 25)) << 6;
-    SENSOR_LIS3DH("temp raw << 6: 0x%02x", raw);
-
-    src->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8);
-    SENSOR_LIS3DH("temp, set, h: 0x%02x", src->adc_3_h);
-    src->adc_3_l = (uint8_t)(raw & 0x00FF);
-    SENSOR_LIS3DH("temp, set, l: 0x%02x", src->adc_3_l);
-}
-
 static int64_t lis3dh_temp_get_data(LIS3DHState *src)
 {
+    uint8_t shifts = 0x00;
+    if(src->config->mode == LIS3DH_MODE_LOW_POWER)
+        shifts = 0x08;
+    else
+        shifts = 0x06;
 
-    int16_t raw = ((int16_t)( ( (int16_t)src->adc_3_h << 8 ) | src->adc_3_h ) >> 6 );
+    int16_t raw = ((int16_t)( ( (int16_t)src->adc_3_h << 8 ) | src->adc_3_l ) >> shifts );
 
     /* I assume a factory calibration point of 25ºC for an output of 0 */
     /* The TSDr is 1 digit/ºC = 1 LSB/ºC */
-    SENSOR_LIS3DH("temp, get, h: 0x%02x", src->adc_3_h);
-    SENSOR_LIS3DH("temp, get, l: 0x%02x", src->adc_3_l);
-    SENSOR_LIS3DH("temp, get, raw: %d", raw);
-
     int64_t temp = 25 + (int64_t)((raw*1.0f)/1);
 
     return temp;
@@ -448,17 +411,42 @@ static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opa
     LIS3DHState *s = LIS3DH(obj);
     
     int64_t value = 0L;
-    if(lis3dh_temp_condition_enable(s))
+    visit_type_int(v, name, &value, errp);
+
+    if ( (value < LIS3DH_TEMP_MIN || value > LIS3DH_TEMP_MAX)
+        &&  lis3dh_temp_enable(s))
     {
-        /** 
-         * intput -40ºC;
-         * value = -40 
-         * Value = 0xFFFF FFFF FFFF FFD8 
-         * value = 11111111 11111111 11111111 11111111 11111111 11111111 11111111 11011000  
+        /* I assume a factory calibration point of 25ºC for an output of 0 */
+        /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
+        
+        /**
+         * T = raw * (1/TSDr) + 25
+         * ºC = LSB * (ºC/LSB) + ºC
+         *
+         * raw = (T - 25.0) * TSDr
+         * LSB = (ºC - ºC) * (LSB/ºC)
          */
-        visit_type_int(v, name, &value, errp);
-        SENSOR_LIS3DH("data recived: %ld", value);
-        lis3dh_temp_set_data(s, value);
+
+        /**
+         * - Output left justified
+         * - Output in normal/high mode 10bit long
+         * - Output in low power mode 8bit long
+         */
+        uint8_t shifts = 0x00;
+        if(s->config->mode == LIS3DH_MODE_LOW_POWER)
+            shifts = 0x08;
+        else
+            shifts = 0x06;
+
+        int16_t raw = ((int16_t)(value - 25)) << shifts;
+
+        s->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8);
+        s->adc_3_l = (uint8_t)(raw & 0x00FF); 
+    }
+    else if (lis3dh_temp_enable(s))
+    {
+        s->adc_3_h = 0x00;
+        s->adc_3_l = 0x00;
     }
 
 }
@@ -468,10 +456,8 @@ static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opa
     LIS3DHState *s = LIS3DH(obj);
 
     int64_t value = 0x00;
-    if(lis3dh_temp_condition_enable(s))
-    {
-        value = lis3dh_temp_get_data(s);
-    }    
+    if(lis3dh_temp_enable(s))
+        value = lis3dh_temp_get_data(s);  
 
     visit_type_int(v, name, &value, errp);
 }
@@ -580,6 +566,7 @@ static bool lis3dh_write_register(LIS3DHState *dst, uint8_t dir, uint8_t data)
     switch (dir)
     {
         case LIS3DH_ADDR_CTRL_REG0:     lis3dh_write_ctr_reg0(dst, data); return true; break;
+        case LIS3DH_ADDR_TEMP_CFG_REG:  dst->temp_cfg_reg = data; return true; break;
         case LIS3DH_ADDR_CTRL_REG1:     lis3dh_write_ctr_reg1(dst, data);  return true; break;
         case LIS3DH_ADDR_CTRL_REG2:     lis3dh_write_ctr_reg2(dst, data);  return true; break;
         case LIS3DH_ADDR_CTRL_REG3:     lis3dh_write_ctr_reg3(dst, data);  return true; break;
