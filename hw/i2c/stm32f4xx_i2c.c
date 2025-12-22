@@ -1,7 +1,7 @@
 /*
  * Broadcom Serial Controller (BSC)
  *
- * Copyright (c) 2024 Rayhan Faizel <rayhan.faizel@gmail.com>
+ * Copyright (c) 2025 Antonio Lotti Villar <antoniolottivillar@gmail.com>
  *
  * SPDX-License-Identifier: MIT
  *
@@ -32,12 +32,7 @@
 #include "hw/i2c/stm32f4xx_i2c.h"
 #include "migration/vmstate.h"
 
-
-/**
- * TODO: 
- * - In The address phase, set the ADDR bit when reciving a ACK 
- * - Transmision more than one bit
- */
+#include "hw/i2c/stm32f4xx_types_i2c.h"
 
 /** ============================================================================
  *                              DEFINITIONS
@@ -56,14 +51,8 @@
 
 #endif
 
-static void stm32f4xx_i2c_reset_reg(STM32F4XXI2CState* stm32f4xx);
+static void stm32f4xx_i2c_reset(STM32F4XXI2CState* stm32f4xx);
 
-enum operation_e
-{
-    ops_na = 0, // No operation
-    ops_w = 1,  // Write
-    ops_r = 2,  // Read    
-};
 
 /** ============================================================================
  *                      INTERRUPT GENERATION FUNCTIONS
@@ -151,25 +140,10 @@ static void stm32f4xx_i2c_clear_status_flag(STM32F4XXI2CState *s, uint32_t flag)
  * =============================================================================
  */
 
-static stm32f4xx_i2c_fsm_t *stm32f4xx_i2c_fsm_new(stm32f4xx_i2c_fsm_trans_t *const src)
+static void stm32f4xx_i2c_fsm_fire(void *s)
 {
-	stm32f4xx_i2c_fsm_t *ret = (stm32f4xx_i2c_fsm_t*)g_malloc(sizeof(stm32f4xx_i2c_fsm_t));
-
-	if(ret != NULL)
-    {
-		ret->trans_table = src;
-	    ret->act_st = src[0].org_st;
-        STM32_DEBUG("FSM created, initial state: %d", ret->act_st);
-    } else 
-    {
-        STM32_DEBUG("ERROR: Failed to allocate FSM!");
-    }
-
-	return ret;
-}
-
-static void stm32f4xx_i2c_fsm_fire(STM32F4XXI2CState *src)
-{
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     STM32_DEBUG("Inside fsm fire");
 
     if (src->fsm->trans_table == NULL)
@@ -211,22 +185,26 @@ static void stm32f4xx_i2c_fsm_fire(STM32F4XXI2CState *src)
  * =============================================================================
  */
 
-static bool stm32f4xx_i2c_fsm_condition_DISABLED_to_IDLE(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_DISABLED_to_IDLE(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_CR1) &&
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_CR1) &&
         ((src->i2c_cr1 & STM_I2C_PE_BIT) != 0 )
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_IDLE_to_START(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_IDLE_to_START(void *s)
 {
-    bool ret = (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_CR1) &&
-        (src->flags.flg_start);
-        //(src->flags.flg_start) &&
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
+    bool ret = (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_CR1) &&
+        (src->config.flg_start);
+        //(src->config.flg_start) &&
         //((src->i2c_cr1 & STM_I2C_ACK_BIT) != 0 );
 
     STM32_DEBUG("IDLE to START condition: %s", ret ? "TRUE" : "FALSE");
@@ -237,186 +215,220 @@ static bool stm32f4xx_i2c_fsm_condition_IDLE_to_START(STM32F4XXI2CState  *src)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_START_to_S_WRITE(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_START_to_S_WRITE(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     uint8_t is_recv = (uint8_t)(extract32(src->i2c_dr, 0, 1));
 
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_DR) &&
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
         (is_recv == 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_S_WRITE_to_TRANS(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_S_WRITE_to_TRANS(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_DR)
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_DR)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_TRANS_to_START(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_TRANS_to_START(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_CR1) &&
-        (src->flags.flg_start)
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_CR1) &&
+        (src->config.flg_start)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_TRANS_to_TRANS(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_TRANS_to_TRANS(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_DR)
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_DR)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_TRANS_to_IDLE(STM32F4XXI2CState *src)
+static bool stm32f4xx_i2c_fsm_condition_TRANS_to_IDLE(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_CR1) &&
-        (src->flags.flg_stop)
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_CR1) &&
+        (src->config.flg_stop)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_START_to_S_READ(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_START_to_S_READ(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     uint8_t is_recv = (uint8_t)(extract32(src->i2c_dr, 0, 1));
 
     return
     (
-        (src->ops == ops_w) &&
-        (src->addr == STM_I2C_REG_DR) &&
+        (src->config.ops == ops_w) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
         (is_recv == 1)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_S_READ_to_RECV_1B(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_S_READ_to_RECV_1B(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        (src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        (src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0) &&
         ((src->i2c_sr1 & STM_I2C_ADDR_BIT) == 0) &&
         ((src->i2c_cr1 & STM_I2C_POS_BIT) == 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_S_READ_to_RECV_2BF(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_S_READ_to_RECV_2BF(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        (src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        (src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0) &&
         ((src->i2c_sr1 & STM_I2C_ADDR_BIT) == 0) &&
         ((src->i2c_cr1 & STM_I2C_POS_BIT) != 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_S_READ_to_R_3B(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_S_READ_to_R_3B(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        !(src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        !(src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0) &&
         ((src->i2c_sr1 & STM_I2C_ADDR_BIT) == 0) &&
         ((src->i2c_cr1 & STM_I2C_POS_BIT) == 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_S_READ_to_RECV_NB(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_S_READ_to_RECV_NB(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        !(src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        !(src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) != 0) &&
         ((src->i2c_sr1 & STM_I2C_ADDR_BIT) == 0) &&
         ((src->i2c_cr1 & STM_I2C_POS_BIT) == 0)    
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_RECV_2BF_to_RECV_2BS(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_RECV_2BF_to_RECV_2BS(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        (src->flags.flg_stop)
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        (src->config.flg_stop)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_R_3B_to_RECV_2BF(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_R_3B_to_RECV_2BF(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        (src->flags.flg_stop)
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        (src->config.flg_stop)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_RECV_NB_to_RECV_NB(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_RECV_NB_to_RECV_NB(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        !(src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        !(src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) != 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_RECV_NB_to_R_3B(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_RECV_NB_to_R_3B(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        !(src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        !(src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_RECV_NB_to_RECV_2BF(STM32F4XXI2CState  *src)
+static bool stm32f4xx_i2c_fsm_condition_RECV_NB_to_RECV_2BF(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->ops == ops_r) &&
-        (src->addr == STM_I2C_REG_DR) &&
-        (src->flags.flg_stop) &&
+        (src->config.ops == ops_r) &&
+        (src->config.addr == STM_I2C_REG_DR) &&
+        (src->config.flg_stop) &&
         ((src->i2c_cr1 & STM_I2C_ACK_BIT) == 0)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_RECV_1B_to_IDLE(STM32F4XXI2CState *src)
+static bool stm32f4xx_i2c_fsm_condition_RECV_1B_to_IDLE(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->flags.flg_stop)
+        (src->config.flg_stop)
     );
 }
 
-static bool stm32f4xx_i2c_fsm_condition_RECV_2BS_to_IDLE(STM32F4XXI2CState *src)
+static bool stm32f4xx_i2c_fsm_condition_RECV_2BS_to_IDLE(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     return
     (
-        (src->flags.flg_stop)
+        (src->config.flg_stop)
     );
 }
 
@@ -425,10 +437,12 @@ static bool stm32f4xx_i2c_fsm_condition_RECV_2BS_to_IDLE(STM32F4XXI2CState *src)
  *                              I2C FSM OUTPUTS
  * =============================================================================
  */
-static void stm32f4xx_i2c_begin_communication(STM32F4XXI2CState *src)
+static void stm32f4xx_i2c_begin_communication(void *s)
 {
-    src->ops    = ops_na;
-    src->addr   = 0xFF;
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
+    src->config.ops    = ops_na;
+    src->config.addr   = 0xFF;
 
     uint8_t address = (uint8_t)(extract32(src->i2c_dr, 1, 7));
     uint8_t is_recv = (uint8_t)(extract32(src->i2c_dr, 0, 1));
@@ -443,11 +457,8 @@ static void stm32f4xx_i2c_begin_communication(STM32F4XXI2CState *src)
         return;
     }
 
-    src->slv_address = address;
 
     STM32_DEBUG("All ok during i2c_start_transfer \n");
-
-    src->slv_address = address;
 
     src->i2c_sr2 = 
     ( (is_recv == 1) ? (src->i2c_sr2 & ~STM_I2C_TRA_BIT) : (src->i2c_sr2 | STM_I2C_TRA_BIT) );
@@ -469,10 +480,12 @@ static void stm32f4xx_i2c_begin_communication(STM32F4XXI2CState *src)
     }
 }
 
-static void stm32f4xx_i2c_data_transfer(STM32F4XXI2CState *src)
+static void stm32f4xx_i2c_data_transfer(void *s)
 {
-    src->ops    = ops_na;
-    src->addr   = 0xFF;
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
+    src->config.ops    = ops_na;
+    src->config.addr   = 0xFF;
 
     if ( i2c_send(src->bus, src->i2c_dr) )
     {
@@ -487,8 +500,10 @@ static void stm32f4xx_i2c_data_transfer(STM32F4XXI2CState *src)
     }
 }
 
-static void stm32f4xx_i2c_data_reception(STM32F4XXI2CState *src)
+static void stm32f4xx_i2c_data_reception(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     src->i2c_dr = (uint32_t)i2c_recv(src->bus);
 
     STM32_DEBUG("Data recived: 0x%02x", src->i2c_dr );
@@ -497,10 +512,12 @@ static void stm32f4xx_i2c_data_reception(STM32F4XXI2CState *src)
     src->i2c_sr1 |= STM_I2C_BTF_BIT;
 }
 
-static void stm32f4xx_i2c_stop_generation(STM32F4XXI2CState *src)
+static void stm32f4xx_i2c_stop_generation(void *s)
 {
-    src->ops    = ops_na;
-    src->addr   = 0xFF;
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
+    src->config.ops    = ops_na;
+    src->config.addr   = 0xFF;
 
     src->i2c_sr2 &= ~STM_I2C_MSL_BIT;
     src->i2c_sr2 &= ~STM_I2C_BUSY_BIT;
@@ -508,33 +525,39 @@ static void stm32f4xx_i2c_stop_generation(STM32F4XXI2CState *src)
     stm32f4xx_i2c_clear_status_flag(src, STM_I2C_BTF_BIT);
     stm32f4xx_i2c_clear_status_flag(src, STM_I2C_TXE_BIT);
         
-    src->flags.flg_sb   = false;
-    src->flags.flg_stop = false;
-    src->flags.flg_addr = false;
+    src->config.flg_sb   = false;
+    src->config.flg_stop = false;
+    src->config.flg_addr = false;
 
     i2c_nack(src->bus);
     i2c_end_transfer(src->bus);
 }
 
-static void stm32f4xx_i2c_last_data_reception(STM32F4XXI2CState *src)
+static void stm32f4xx_i2c_last_data_reception(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     stm32f4xx_i2c_data_reception(src);
     stm32f4xx_i2c_fsm_fire(src);
 }
 
-static void stm32f4xx_i2c_fsm_output_DISABLED_to_IDLE(STM32F4XXI2CState  *src)
+static void stm32f4xx_i2c_fsm_output_DISABLED_to_IDLE(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     (void)src;
 }
 
-static void stm32f4xx_i2c_fsm_output_IDLE_to_START(STM32F4XXI2CState  *src)
+static void stm32f4xx_i2c_fsm_output_IDLE_to_START(void *s)
 {
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
     STM32_DEBUG("\n OUTPUT IDLE to START \n");
 
-    src->ops    = ops_na;
-    src->addr   = 0xFF;
+    src->config.ops    = ops_na;
+    src->config.addr   = 0xFF;
 
-    src->flags.flg_start = false;
+    src->config.flg_start = false;
 
     src->i2c_sr2 |= STM_I2C_MSL_BIT;
     src->i2c_sr2 |= STM_I2C_BUSY_BIT;
@@ -547,12 +570,14 @@ static void stm32f4xx_i2c_fsm_output_IDLE_to_START(STM32F4XXI2CState  *src)
     qemu_log_mask(LOG_GUEST_ERROR, "STM32 I2C: START condition sent\n");
 }
 
-static void stm32f4xx_i2c_fsm_output_TRANS_to_START(STM32F4XXI2CState  *src)
+static void stm32f4xx_i2c_fsm_output_TRANS_to_START(void *s)
 {
-    src->ops    = ops_na;
-    src->addr   = 0xFF;
+    STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
+    
+    src->config.ops    = ops_na;
+    src->config.addr   = 0xFF;
 
-    src->flags.flg_start = false;
+    src->config.flg_start = false;
 
     src->i2c_sr2 |= STM_I2C_MSL_BIT;
     src->i2c_sr2 |= STM_I2C_BUSY_BIT;
@@ -630,7 +655,7 @@ static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
             return;
         }
 
-        s->flags.flg_start = true;
+        s->config.flg_start = true;
 
         value &= ~STM_I2C_START_BIT;
     }
@@ -645,7 +670,7 @@ static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
         }
 
         STM32_DEBUG("Stop condition requested\n");
-        s->flags.flg_stop = true;
+        s->config.flg_stop = true;
 
         value &= ~STM_I2C_STOP_BIT;
     }
@@ -701,7 +726,7 @@ static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
     {
         STM32_DEBUG(" Software Reset\n");
         
-        stm32f4xx_i2c_reset_reg(s);
+        stm32f4xx_i2c_reset(s);
 
         return;
     }
@@ -744,10 +769,10 @@ static void __i2c_write_dr(STM32F4XXI2CState *s, uint64_t value)
     stm32f4xx_i2c_clear_status_flag(s, STM_I2C_RXNE_BIT);
 
     /* Handle SB flag clearing */
-    if ((s->i2c_sr1 & STM_I2C_SB_BIT) && s->flags.flg_sb == true) 
+    if ((s->i2c_sr1 & STM_I2C_SB_BIT) && s->config.flg_sb == true) 
     {
         STM32_DEBUG(" SB flag cleared after DR write\n");
-        s->flags.flg_sb = false;
+        s->config.flg_sb = false;
         stm32f4xx_i2c_clear_status_flag(s, STM_I2C_SB_BIT);
     }
 
@@ -758,8 +783,8 @@ static void __i2c_write_dr(STM32F4XXI2CState *s, uint64_t value)
 
 static uint64_t __i2c_read_sr1(STM32F4XXI2CState *s)
 {    
-    s->flags.flg_sb     = true;
-    s->flags.flg_addr   = true;
+    s->config.flg_sb     = true;
+    s->config.flg_addr   = true;
 
     return (uint64_t)(s->i2c_sr1);
 }
@@ -768,9 +793,9 @@ static uint64_t __i2c_read_sr1(STM32F4XXI2CState *s)
 static uint64_t __i2c_read_sr2(STM32F4XXI2CState *s)
 {
     // Handling ADDR Bit Clearing 
-    if ( s->flags.flg_addr )
+    if ( s->config.flg_addr )
     {
-        s->flags.flg_addr = false;
+        s->config.flg_addr = false;
         s->i2c_sr1 &= ~STM_I2C_ADDR_BIT;
     }
 
@@ -791,14 +816,14 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
     
     STM32_DEBUG("READ addres: 0x%02x", (uint32_t)addr);
 
-    s->ops = ops_r;
-    s->addr = addr;
+    s->config.ops = ops_r;
+    s->config.addr = addr;
 
-    if ( s->flags.flg_addr && addr != STM_I2C_REG_SR2)
-        s->flags.flg_addr = false;
+    if ( s->config.flg_addr && addr != STM_I2C_REG_SR2)
+        s->config.flg_addr = false;
 
-    if ( s->flags.flg_sb )
-        s->flags.flg_sb = false;
+    if ( s->config.flg_sb )
+        s->config.flg_sb = false;
 
     switch (addr) 
     {
@@ -819,8 +844,8 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
 
     STM32_DEBUG("Value readed: 0x%02x", (uint32_t)result);
 
-    s->ops = ops_na;
-    s->addr = 0xFF;
+    s->config.ops = ops_na;
+    s->config.addr = 0xFF;
 
     return result;
 }
@@ -831,8 +856,8 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 
     STM32_DEBUG("WRITE addres: 0x%02x", (uint32_t)addr);
 
-    s->ops = ops_w;
-    s->addr = addr;
+    s->config.ops = ops_w;
+    s->config.addr = addr;
 
     switch (addr) 
     {
@@ -850,8 +875,8 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
             qemu_log_mask(LOG_GUEST_ERROR, "STM32 I2C: Bad write offset 0x%lx\n", addr);
     }
 
-    s->ops = ops_na;
-    s->addr = 0xFF;
+    s->config.ops = ops_na;
+    s->config.addr = 0xFF;
 
 }
 
@@ -862,31 +887,37 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
  * ============================================================================ 
  */
 
-static void stm32f4xx_i2c_reset_reg(STM32F4XXI2CState* stm32f4xx)
+static void stm32f4xx_i2c_reset(STM32F4XXI2CState* stm32f4xx)
 {
-     STM32_DEBUG("Resetting I2C controller");
+    STM32_DEBUG("Resetting I2C controller");
     
-    // Free existing FSM if it exists
-    if (stm32f4xx->fsm) 
-    {
+    /* Initialize fsm */
+    if (stm32f4xx->fsm) // Free existing FSM if it exists
         g_free(stm32f4xx->fsm);
-        stm32f4xx->fsm = NULL;
+
+    stm32f4xx->fsm = (stm32f4xx_i2c_fsm_t*)g_malloc(sizeof(stm32f4xx_i2c_fsm_t));
+
+    if(stm32f4xx->fsm != NULL)
+    {
+		stm32f4xx->fsm->trans_table = stm32f4xx_i2c_fsm_transition_table;
+	    stm32f4xx->fsm->act_st = stm32f4xx_i2c_fsm_transition_table[0].org_st;
+        STM32_DEBUG("FSM created, initial state: %d", stm32f4xx->fsm->act_st);
+    } else 
+    {
+        STM32_DEBUG("ERROR: Failed to allocate FSM!");
+        return;
     }
 
-    // Create new FSM
-    stm32f4xx->fsm = stm32f4xx_i2c_fsm_new(stm32f4xx_i2c_fsm_transition_table);
-    if (!stm32f4xx->fsm)
-        STM32_DEBUG("ERROR: Failed to create FSM on reset!");
+    /* Initialize internall parameters */
 
-    stm32f4xx->ops              = ops_na;
-    stm32f4xx->addr             = 0xFF;
-    stm32f4xx->slv_address      = 0xFF;
+    stm32f4xx->config.ops       = ops_na;
+    stm32f4xx->config.addr      = 0xFF;
 
-    stm32f4xx->flags.flg_sb     = false;
-    stm32f4xx->flags.flg_start  = false;
-    stm32f4xx->flags.flg_stop   = false;
-    stm32f4xx->flags.flg_swrst  = false;
-    stm32f4xx->flags.flg_addr   = false;
+    stm32f4xx->config.flg_sb     = false;
+    stm32f4xx->config.flg_start  = false;
+    stm32f4xx->config.flg_stop   = false;
+    stm32f4xx->config.flg_swrst  = false;
+    stm32f4xx->config.flg_addr   = false;
 
     stm32f4xx->i2c_cr1      = STM_I2C_REG_CR1_DEF;
     stm32f4xx->i2c_cr2      = STM_I2C_REG_CR2_DEF;
@@ -906,12 +937,6 @@ static Property stm32f4xx_i2c_properties[] =
 {
     DEFINE_PROP_STRING("bus-name", STM32F4XXI2CState, bus_name),
 };
-
-static void stm32f4xx_i2c_reset(DeviceState *dev)
-{
-    STM32F4XXI2CState  *src = STM32F4XX_I2C(dev);
-    stm32f4xx_i2c_reset_reg(src);
-}
 
 static const VMStateDescription vmstate_stm32f4xx_i2c = 
 {
@@ -942,17 +967,15 @@ static const MemoryRegionOps stm32f4xx_i2c_ops =
 
 static void stm32f4xx_i2c_realize(DeviceState *dev, Error **errp)
 {
-    STM32_DEBUG("Realizing STM32F4XX I2C controller\n");
+    STM32_DEBUG("Realizing STM32F4XX I2C controller");
 
     STM32F4XXI2CState   *stm32  = STM32F4XX_I2C(dev);
     SysBusDevice        *sbd    = SYS_BUS_DEVICE(dev);
 
     if (!stm32->bus_name) 
-    {
         stm32->bus_name = g_strdup("i2c");
-    }
 
-    STM32_DEBUG("stm32->bus_name = %s \n", stm32->bus_name );
+    STM32_DEBUG("stm32->bus_name = %s", stm32->bus_name );
     stm32->bus = i2c_init_bus(dev, stm32->bus_name);
     
     memory_region_init_io
@@ -968,13 +991,14 @@ static void stm32f4xx_i2c_realize(DeviceState *dev, Error **errp)
     sysbus_init_irq(sbd, &stm32->irq_event);
     sysbus_init_irq(sbd, &stm32->irq_error);
 
-
     if (!stm32->bus) 
     {
         error_setg(errp, "stm32f4xx_i2c: I2C bus not initialized");
         return;
     }
 
+    /* Initialize Registers */
+    stm32f4xx_i2c_reset(stm32);
 
     STM32_DEBUG(" I2C realized successfully\n");
 }
@@ -988,7 +1012,7 @@ static void stm32f4xx_i2c_class_init(ObjectClass *klass, void *data)
     DeviceClass *dc = DEVICE_CLASS(klass);
 
     device_class_set_props(dc, stm32f4xx_i2c_properties);
-    device_class_set_legacy_reset(dc, stm32f4xx_i2c_reset);
+//    device_class_set_legacy_reset(dc, stm32f4xx_i2c_reset);
     dc->realize = stm32f4xx_i2c_realize;
     dc->vmsd    = &vmstate_stm32f4xx_i2c;
 }
