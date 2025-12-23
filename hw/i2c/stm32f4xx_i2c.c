@@ -34,30 +34,22 @@
 
 #include "hw/i2c/stm32f4xx_types_i2c.h"
 
-/** ============================================================================
- *                              DEFINITIONS
- * =============================================================================
- */
-
 /* Debug control */
-#define DEBUG_I2C 1
+#define DEBUG_I2C 0
 
-#ifdef DEBUG_I2C
+#if DEBUG_I2C == 1
 
 #define STM32_DEBUG(text, ...) \
     printf("STM32 I2C: " text "\n", ## __VA_ARGS__ )
 #else
-#define DPRINTF_BUFFER(fmt, ...) do {} while(0)
+#define STM32_DEBUG(fmt, ...) do {} while(0)
 
 #endif
 
 static void stm32f4xx_i2c_reset(STM32F4XXI2CState* stm32f4xx);
 
 
-/** ============================================================================
- *                      INTERRUPT GENERATION FUNCTIONS
- * =============================================================================
- */
+/* ====== INTERRUPTIONS ====== */
 
 static void stm32f4xx_i2c_update_irq(STM32F4XXI2CState *s)
 {
@@ -135,10 +127,7 @@ static void stm32f4xx_i2c_clear_status_flag(STM32F4XXI2CState *s, uint32_t flag)
 }
 
 
-/** ============================================================================
- *                              I2C FSM FUNCTIONS
- * =============================================================================
- */
+/* ========= I2C FSM ========= */
 
 static void stm32f4xx_i2c_fsm_fire(void *s)
 {
@@ -160,10 +149,10 @@ static void stm32f4xx_i2c_fsm_fire(void *s)
         if (t->condition == NULL)
         {
             STM32_DEBUG("Condition NUL");
-            continue;  // Skip invalid entries
+            continue;
         }
         
-        //STM32_DEBUG("Inside fsm fire for loop, t->org_st = %d", t->org_st);
+        STM32_DEBUG("Inside fsm fire for loop, t->org_st = %d", t->org_st);
 
         if ((src->fsm->act_st == t->org_st) && t->condition(src))
         {
@@ -180,10 +169,7 @@ static void stm32f4xx_i2c_fsm_fire(void *s)
     }
 }
 
-/** ============================================================================
- *                              I2C FSM CONDITIONS
- * =============================================================================
- */
+/*< FSM CONDITIONS >*/
 
 static bool stm32f4xx_i2c_fsm_condition_DISABLED_to_IDLE(void *s)
 {
@@ -204,8 +190,6 @@ static bool stm32f4xx_i2c_fsm_condition_IDLE_to_START(void *s)
     bool ret = (src->config.ops == ops_w) &&
         (src->config.addr == STM_I2C_REG_CR1) &&
         (src->config.flg_start);
-        //(src->config.flg_start) &&
-        //((src->i2c_cr1 & STM_I2C_ACK_BIT) != 0 );
 
     STM32_DEBUG("IDLE to START condition: %s", ret ? "TRUE" : "FALSE");
 
@@ -432,11 +416,8 @@ static bool stm32f4xx_i2c_fsm_condition_RECV_2BS_to_IDLE(void *s)
     );
 }
 
+/*< FSM OUTPUT >*/
 
-/** ============================================================================
- *                              I2C FSM OUTPUTS
- * =============================================================================
- */
 static void stm32f4xx_i2c_begin_communication(void *s)
 {
     STM32F4XXI2CState  *src = (STM32F4XXI2CState*)s;
@@ -590,6 +571,7 @@ static void stm32f4xx_i2c_fsm_output_TRANS_to_START(void *s)
     qemu_log_mask(LOG_GUEST_ERROR, "STM32 I2C: START condition sent\n");
 }
 
+/*< FSM TRANSITION TABLE >*/
 
 stm32f4xx_i2c_fsm_trans_t stm32f4xx_i2c_fsm_transition_table[TRANSITIONS]= 
 {
@@ -617,11 +599,7 @@ stm32f4xx_i2c_fsm_trans_t stm32f4xx_i2c_fsm_transition_table[TRANSITIONS]=
 };
 
 
-/**
- * ============================================================================
- *              REGISTER READ/WRITE HANDLERS
- * ============================================================================ 
- */
+/* ====== REGISTERS FUNCTIONS ====== */
 
 static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
 {
@@ -803,11 +781,8 @@ static uint64_t __i2c_read_sr2(STM32F4XXI2CState *s)
 
 }
 
-/**
- * ============================================================================
- *              QEMU REGISTER ACCESS HANDLERS
- * ============================================================================ 
- */
+
+/* ====== QEMU REGISTER ACCESS HANDLERS ====== */
 
 static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
 {
@@ -881,11 +856,7 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 }
 
 
-/**
- * ============================================================================
- *              DEVICE LIFE FUNCTIONS
- * ============================================================================ 
- */
+/* ====== QEMU DEVICES FUNCTIONS ====== */
 
 static void stm32f4xx_i2c_reset(STM32F4XXI2CState* stm32f4xx)
 {
@@ -1003,10 +974,6 @@ static void stm32f4xx_i2c_realize(DeviceState *dev, Error **errp)
     STM32_DEBUG(" I2C realized successfully\n");
 }
 
-
-/**************************************************************************
-    LIS3DH REGISTRATION IN QEMU 
-**************************************************************************/
 static void stm32f4xx_i2c_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
