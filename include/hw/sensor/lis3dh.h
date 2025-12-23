@@ -295,9 +295,8 @@
 
 #define CASE_READ_RETURN(VAL, REG, FIELD)   case REG: VAL = (src->FIELD); break;
 
-/**************************************************************************
-    DEVICE STRUCTURES AND QOM DECLARATION
-**************************************************************************/
+
+/* ==================== LIS3DH QOM DECLARATION ====================================== */
 
 /* Declaration of the QOM for the LIS3DH */
 #define TYPE_LIS3DH "lis3dh"
