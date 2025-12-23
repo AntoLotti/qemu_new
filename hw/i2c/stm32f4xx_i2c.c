@@ -600,7 +600,7 @@ stm32f4xx_i2c_fsm_trans_t stm32f4xx_i2c_fsm_transition_table[TRANSITIONS]=
 
 /* ====== REGISTERS FUNCTIONS ====== */
 
-static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
+static void stm32f4xx_i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
 {
     // PE bit handling (Bit 0)
     if ( (s->i2c_cr1 & STM32F4_I2C_PE_BIT) != (value & STM32F4_I2C_PE_BIT) )
@@ -715,14 +715,14 @@ static void __i2c_write_cr1(STM32F4XXI2CState *s, uint64_t value)
 }
 
 
-static void __i2c_write_cr2(STM32F4XXI2CState *s, uint64_t value)
+static void stm32f4xx_i2c_write_cr2(STM32F4XXI2CState *s, uint64_t value)
 {
     s->i2c_cr2 = value;
     stm32f4xx_i2c_update_irq(s);
 }
 
 
-static uint64_t __i2c_read_dr(STM32F4XXI2CState *s)
+static uint64_t stm32f4xx_i2c_read_dr(STM32F4XXI2CState *s)
 {
     // Handling BTF Bit Cleaning
     stm32f4xx_i2c_clear_status_flag(s, STM32F4_I2C_BTF_BIT);
@@ -736,7 +736,7 @@ static uint64_t __i2c_read_dr(STM32F4XXI2CState *s)
     return (uint64_t)(s->i2c_dr);
 }
 
-static void __i2c_write_dr(STM32F4XXI2CState *s, uint64_t value)
+static void stm32f4xx_i2c_write_dr(STM32F4XXI2CState *s, uint64_t value)
 {
     s->i2c_dr = (uint32_t)value & 0xFF;
 
@@ -758,7 +758,7 @@ static void __i2c_write_dr(STM32F4XXI2CState *s, uint64_t value)
 }
 
 
-static uint64_t __i2c_read_sr1(STM32F4XXI2CState *s)
+static uint64_t stm32f4xx_i2c_read_sr1(STM32F4XXI2CState *s)
 {    
     s->config.flg_sb     = true;
     s->config.flg_addr   = true;
@@ -767,7 +767,7 @@ static uint64_t __i2c_read_sr1(STM32F4XXI2CState *s)
 }
 
 
-static uint64_t __i2c_read_sr2(STM32F4XXI2CState *s)
+static uint64_t stm32f4xx_i2c_read_sr2(STM32F4XXI2CState *s)
 {
     // Handling ADDR Bit Clearing 
     if ( s->config.flg_addr )
@@ -805,9 +805,9 @@ static uint64_t stm32f4xx_i2c_read(void *opaque, hwaddr addr, unsigned size)
         case STM32F4_I2C_CR2_ADDR:   result = s->i2c_cr2;        break;
         case STM32F4_I2C_OAR1_ADDR:  result = s->i2c_oar1;       break;
         case STM32F4_I2C_OAR2_ADDR:  result = s->i2c_oar2;       break;
-        case STM32F4_I2C_DR_ADDR:    result = __i2c_read_dr(s);  break;
-        case STM32F4_I2C_SR1_ADDR:   result = __i2c_read_sr1(s); break;
-        case STM32F4_I2C_SR2_ADDR:   result = __i2c_read_sr2(s); break;
+        case STM32F4_I2C_DR_ADDR:    result = stm32f4xx_i2c_read_dr(s);  break;
+        case STM32F4_I2C_SR1_ADDR:   result = stm32f4xx_i2c_read_sr1(s); break;
+        case STM32F4_I2C_SR2_ADDR:   result = stm32f4xx_i2c_read_sr2(s); break;
         case STM32F4_I2C_CCR_ADDR:   result = s->i2c_ccr;        break;
         case STM32F4_I2C_TRISE_ADDR: result = s->i2c_trise;      break;
         case STM32F4_I2C_FLTR_ADDR:  result = s->i2c_fltr;       break;
@@ -835,11 +835,11 @@ static void stm32f4xx_i2c_write(void *opaque, hwaddr addr, uint64_t value, uint3
 
     switch (addr) 
     {
-        case STM32F4_I2C_CR1_ADDR:   __i2c_write_cr1(s, value);         break;
-        case STM32F4_I2C_CR2_ADDR:   __i2c_write_cr2(s, value);         break;
+        case STM32F4_I2C_CR1_ADDR:   stm32f4xx_i2c_write_cr1(s, value); break;
+        case STM32F4_I2C_CR2_ADDR:   stm32f4xx_i2c_write_cr2(s, value); break;
         case STM32F4_I2C_OAR1_ADDR:  s->i2c_oar1 = (uint32_t)value;     break;
         case STM32F4_I2C_OAR2_ADDR:  s->i2c_oar2 = (uint32_t)value;     break;
-        case STM32F4_I2C_DR_ADDR:    __i2c_write_dr(s, value);          break;
+        case STM32F4_I2C_DR_ADDR:    stm32f4xx_i2c_write_dr(s, value);  break;
         case STM32F4_I2C_SR1_ADDR:   s->i2c_sr1  = (uint32_t)value;     break;
         case STM32F4_I2C_SR2_ADDR:   s->i2c_sr1  = (uint32_t)value;     break;
         case STM32F4_I2C_CCR_ADDR:   s->i2c_ccr  = (uint32_t)value;     break;
