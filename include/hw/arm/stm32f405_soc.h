@@ -70,6 +70,9 @@ struct STM32F405State {
     STM32F2XXADCState adc[STM_NUM_ADCS];
     STM32F2XXSPIState spi[STM_NUM_SPIS];
     STM32F4XXI2CState i2c[STM_NUM_I2CS];
+    I2CBus *i2c1bus;
+    I2CBus *i2c2bus;
+    I2CBus *i2c3bus;
     STM32GPIOState gpio[STM_NUM_GPIOS];
 
     MemoryRegion ccm;
