@@ -108,6 +108,7 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
     STM32F405State *s = STM32F405_SOC(dev_soc);
     MemoryRegion *system_memory = get_system_memory();
     DeviceState *dev, *armv7m;
+//    DeviceState *lis3dh;;
     SysBusDevice *busdev;
     Error *err = NULL;
     int i;
@@ -262,6 +263,7 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
 
         char *bus_name = g_strdup_printf("i2c%d", i+1);
         qdev_prop_set_string(dev, "bus-name", bus_name );
+        g_free(bus_name);
 
         if (!sysbus_realize(SYS_BUS_DEVICE(&s->i2c[i]), errp))
             return;
@@ -273,12 +275,7 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
         sysbus_connect_irq(busdev, 0,
                            qdev_get_gpio_in(armv7m, i2c_irq[i*2]));
         sysbus_connect_irq(busdev, 1,
-                           qdev_get_gpio_in(armv7m, i2c_irq[i*2+1]));
-
-        // Store the bus pointers for easy access
-        if (i == 0) s->i2c1bus = s->i2c[i].bus;
-        if (i == 1) s->i2c2bus = s->i2c[i].bus;
-        if (i == 2) s->i2c3bus = s->i2c[i].bus;             
+                           qdev_get_gpio_in(armv7m, i2c_irq[i*2+1]));         
     }
 
     /**

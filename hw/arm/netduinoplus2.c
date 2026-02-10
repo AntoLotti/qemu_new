@@ -50,16 +50,18 @@ static void netduinoplus2_init(MachineState *machine)
     qdev_connect_clock_in(dev, "sysclk", sysclk);
     sysbus_realize_and_unref(SYS_BUS_DEVICE(dev), &error_fatal);
 
+   /* Initialize LIS3DH on I2C1 */
+
+    STM32F405State *s = STM32F405_SOC(dev);    
+    DeviceState *lis3dh = qdev_new(TYPE_LIS3DH);                                    // Creating LIS3DH accelerometer
+    
+    i2c_slave_set_address(I2C_SLAVE(lis3dh), 0x18);                                 // Setting I2C address to 0x18    
+    i2c_slave_realize_and_unref(I2C_SLAVE(lis3dh), s->i2c[0].bus, &error_fatal);    // Connecting to I2C1 bus
+    qdev_connect_gpio_out(lis3dh, 0, qdev_get_gpio_in(DEVICE(&s->exti), 1));
+
     armv7m_load_kernel(ARM_CPU(first_cpu),
                        machine->kernel_filename,
                        0, FLASH_SIZE);
-
-    STM32F405State *s = STM32F405_SOC(dev);
-    DeviceState *lis3dh = qdev_new(TYPE_LIS3DH);  
-
-    /* LIS3DH to I2C1 */
-    i2c_slave_set_address(I2C_SLAVE(lis3dh), 0x18);                                 //Setting I2C address to 0x18    
-    i2c_slave_realize_and_unref(I2C_SLAVE(lis3dh), s->i2c[0].bus, &error_fatal);    // Connecting to I2C1 bus
 }
 
 static void netduinoplus2_machine_init(MachineClass *mc)
