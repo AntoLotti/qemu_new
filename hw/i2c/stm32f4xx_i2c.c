@@ -988,7 +988,6 @@ static const TypeInfo stm32f4xx_i2c_info =
     .name           = TYPE_STM32F4XX_I2C,
     .parent         = TYPE_SYS_BUS_DEVICE,
     .instance_size  = sizeof(STM32F4XXI2CState),
-    // .instance_init  = stm32f4xx_i2c_init,
     .class_init     = stm32f4xx_i2c_class_init,
 };
 
