@@ -135,6 +135,8 @@ typedef struct lis3dh_config_s
     bool temp_enable;       /**< Enable Temperature Sensor */
     bool high_pass_filter;  /**< Enable HP Filter   */
     bool fifo_enabled;      /**< Enable FIFO        */
+    bool int1_active;       // Track if INT1 is currently active
+    bool int2_active;       // Track if INT2 is currently active
 }lis3dh_config_t;
 
 /**
@@ -146,10 +148,10 @@ typedef struct lis3dh_config_s
  */
 typedef struct lis3dh_params_s
 {
-    float acc_So;	        /**< Sensitivity of the current mode and fscale*/
-    int64_t acc_max_range;  /**< max acceleration in the current mode */
-    int64_t acc_min_range;  /**< min acceleration in the current mode */
-    int8_t acc_shifts;      /**< number of shift for the raw_data in the mode */
+    float acc_sensitivity;      /**< Sensitivity (mg/LSB) for current mode and fscale */
+    int64_t acc_max_range;      /**< Maximum acceleration in current mode (mg) */
+    int64_t acc_min_range;      /**< Minimum acceleration in current mode (mg) */
+    int8_t acc_shifts;          /**< Number of left-shifts for raw_data in current mode */
 }lis3dh_params_t;
 
 /**

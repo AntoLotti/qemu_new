@@ -15,15 +15,30 @@
 #include <math.h>
 #include <float.h>
 
-#define DEBUG_LIS3DH 1
+#define DEBUG_LIS3DH    1
+#define TESTING_LIS3DH  1
 
 #ifdef DEBUG_LIS3DH
-
 #define SENSOR_LIS3DH(text, ...) \
     printf("LIS3DH: " text "\n", ## __VA_ARGS__ )
 #else
-#define DPRINTF_BUFFER(fmt, ...) do {} while(0)
+#define SENSOR_LIS3DH(fmt, ...) do {} while(0)
+#endif
 
+#ifdef TESTING_LIS3DH
+#define TEST_MODE(text, ...) \
+    printf("[LIS3DH] Mode: " text "\n", ## __VA_ARGS__ )
+#define TEST_FS(text, ...) \
+    printf("[LIS3DH] FS: " text "\n", ## __VA_ARGS__ )
+#define TEST_ODR(text, ...) \
+    printf("[LIS3DH] ODR: " text "\n", ## __VA_ARGS__ )
+#define TEST_SO(text, ...) \
+    printf("[LIS3DH] acc sensitivity: " text "\n", ## __VA_ARGS__ )
+#else
+#define TEST_MODE(fmt, ...) do {} while(0)
+#define TEST_FS(fmt, ...) do {} while(0)
+#define TEST_ODR(fmt, ...) do {} while(0)
+#define TEST_SO(fmt, ...) do {} while(0)
 #endif
 
 static void lis3dh_set_So(LIS3DHState *src)
@@ -33,58 +48,64 @@ static void lis3dh_set_So(LIS3DHState *src)
         case LIS3DH_MODE_HIGH_RES:  // 12-bit
             switch (src->config->fscale)
             {
-                case LIS3DH_FS_2G:  src->params->acc_So = LIS3DH_So_HIG_RES_2G;	 return; break;
-                case LIS3DH_FS_4G:  src->params->acc_So = LIS3DH_So_HIG_RES_4G;	 return; break;
-                case LIS3DH_FS_8G:  src->params->acc_So = LIS3DH_So_HIG_RES_8G;	 return; break;
-                case LIS3DH_FS_16G: src->params->acc_So = LIS3DH_So_HIG_RES_16G; return; break;
+                case LIS3DH_FS_2G:  src->params->acc_sensitivity = LIS3DH_So_HIGH_RES_2G;     return;
+                case LIS3DH_FS_4G:  src->params->acc_sensitivity = LIS3DH_So_HIGH_RES_4G;     return;
+                case LIS3DH_FS_8G:  src->params->acc_sensitivity = LIS3DH_So_HIGH_RES_8G;     return;
+                case LIS3DH_FS_16G: src->params->acc_sensitivity = LIS3DH_So_HIGH_RES_16G;    return;
                 default:
-                    src->params->acc_So = 4.0f; // Default: normal ±2g
+                    src->params->acc_sensitivity = 4.0f; // Default: normal ±2g
                     qemu_log_mask(LOG_GUEST_ERROR,
-                        "%s: The FS: 0x%02x does not exist for this operating mode, So setted default value ±2g, So: %.2f\n",
-                        __func__, src->config->fscale, src->params->acc_So);
-                break;
+                        "%s: The FS: 0x%02x does not exist for this operating mode, "
+                        "sensitivity set to default value ±2g, So: %.2f\n",
+                        __func__, src->config->fscale, src->params->acc_sensitivity);
+                    break;
             }
             break;
 
-        case LIS3DH_MODE_NORMAL:  // 10-bit
+        case LIS3DH_MODE_NORMAL: // 10-bit
             switch (src->config->fscale)
             {
-                case LIS3DH_FS_2G:  src->params->acc_So = LIS3DH_So_NORMAL_2G;  return; break;
-                case LIS3DH_FS_4G:  src->params->acc_So = LIS3DH_So_NORMAL_4G;  return; break;
-                case LIS3DH_FS_8G:  src->params->acc_So = LIS3DH_So_NORMAL_8G;  return; break;
-                case LIS3DH_FS_16G: src->params->acc_So = LIS3DH_So_NORMAL_16G; return; break;
+                case LIS3DH_FS_2G:  src->params->acc_sensitivity = LIS3DH_So_NORMAL_2G;     return;
+                case LIS3DH_FS_4G:  src->params->acc_sensitivity = LIS3DH_So_NORMAL_4G;     return;
+                case LIS3DH_FS_8G:  src->params->acc_sensitivity = LIS3DH_So_NORMAL_8G;     return;
+                case LIS3DH_FS_16G: src->params->acc_sensitivity = LIS3DH_So_NORMAL_16G;    return;
                 default:
-                    src->params->acc_So = 4.0f; // Default: normal ±2g
+                    src->params->acc_sensitivity = 4.0f; // Default: normal ±2g
                     qemu_log_mask(LOG_GUEST_ERROR,
-                        "%s: The FS: 0x%02x does not exist for this operating mode, So setted default value ±2g, So: %.2f\n",
-                        __func__, src->config->fscale, src->params->acc_So);
-                break;
+                        "%s: The FS: 0x%02x does not exist for this operating mode, "
+                        "sensitivity set to default value ±2g, So: %.2f\n",
+                        __func__, src->config->fscale, src->params->acc_sensitivity);
+                    break;
             }
             break;
 
-        case LIS3DH_MODE_LOW_POWER:  // 8-bit
+        case LIS3DH_MODE_LOW_POWER: // 8-bit
             switch (src->config->fscale)
             {
-                case LIS3DH_FS_2G:  src->params->acc_So = LIS3DH_So_LOW_POWER_2G;  return; break;
-                case LIS3DH_FS_4G:  src->params->acc_So = LIS3DH_So_LOW_POWER_4G;  return; break;
-                case LIS3DH_FS_8G:  src->params->acc_So = LIS3DH_So_LOW_POWER_8G;  return; break;
-                case LIS3DH_FS_16G: src->params->acc_So = LIS3DH_So_LOW_POWER_16G; return; break;
+                case LIS3DH_FS_2G:  src->params->acc_sensitivity = LIS3DH_So_LOW_POWER_2G;    return;
+                case LIS3DH_FS_4G:  src->params->acc_sensitivity = LIS3DH_So_LOW_POWER_4G;    return;
+                case LIS3DH_FS_8G:  src->params->acc_sensitivity = LIS3DH_So_LOW_POWER_8G;    return;
+                case LIS3DH_FS_16G: src->params->acc_sensitivity = LIS3DH_So_LOW_POWER_16G;   return;
                 default:
-                    src->params->acc_So = 4.0f; // Default: normal ±2g
+                    src->params->acc_sensitivity = 4.0f; // Default: normal ±2g
                     qemu_log_mask(LOG_GUEST_ERROR,
-                        "%s: The FS: 0x%02x does not exist for this operating mode, So setted default value ±2g, So: %.2f\n",
-                        __func__, src->config->fscale, src->params->acc_So);
-                break;
+                        "%s: The FS: 0x%02x does not exist for this operating mode, "
+                        "sensitivity set to default value ±2g, So: %.2f\n",
+                        __func__, src->config->fscale, src->params->acc_sensitivity);
+                    break;
             }
             break;
 
         default:
-            src->params->acc_So = 4.0f; // Default: normal ±2g
+            src->params->acc_sensitivity = 4.0f; // Default: normal ±2g
             qemu_log_mask(LOG_GUEST_ERROR,
-                      "%s: The operating mode 0x%02x does not exist, So setted to the default value ±2g, So: %.2f\n",
-                      __func__, src->config->mode, src->params->acc_So);
+                "%s: The operating mode 0x%02x does not exist, "
+                "sensitivity set to default value ±2g, So: %.2f\n",
+                __func__, src->config->mode, src->params->acc_sensitivity);
             break;
     }
+
+
 }
 
 static void lis3dh_set_acc_range(LIS3DHState *src)
@@ -152,10 +173,28 @@ static void lis3dh_set_operating_mode(LIS3DHState *src)
             mode = LIS3DH_MODE_NORMAL;
         }
     }
-    
+
     src->config->mode = mode;
+
+#ifdef TESTING_LIS3DH
+    
+    const char *str;
+    
+    if (mode == LIS3DH_MODE_NORMAL)
+        str = "normal";
+    else if (mode == LIS3DH_MODE_HIGH_RES)
+        str = "high";
+    else if(mode == LIS3DH_MODE_LOW_POWER)
+        str = "low";
+    else
+        str = "not_allowed";
+
+    TEST_MODE("%s",str);
+#endif
+    
     lis3dh_set_So(src);
     lis3dh_set_acc_shifts(src);
+    TEST_SO("%.1f",src->params->acc_sensitivity);
 }
 
 static void lis3dh_set_odr(LIS3DHState *src)
@@ -176,6 +215,35 @@ static void lis3dh_set_odr(LIS3DHState *src)
     }
 
     src->config->odr = odr;
+#ifdef TESTING_LIS3DH
+    
+    const char *str;
+
+    if (odr == LIS3DH_ODR_POWER_DOWN)
+        str = "LIS3DH_ODR_POWER_DOWN";
+    else if (odr == LIS3DH_ODR_1         )
+        str = "LIS3DH_ODR_1         ";        
+    else if (odr == LIS3DH_ODR_10        )
+        str = "LIS3DH_ODR_10        ";
+    else if (odr == LIS3DH_ODR_25        )
+        str = "LIS3DH_ODR_25        ";
+    else if (odr == LIS3DH_ODR_50        )
+        str = "LIS3DH_ODR_50        ";
+    else if (odr == LIS3DH_ODR_100       )
+        str = "LIS3DH_ODR_100       ";
+    else if (odr == LIS3DH_ODR_200       )
+        str = "LIS3DH_ODR_200       ";
+    else if (odr == LIS3DH_ODR_400       )
+        str = "LIS3DH_ODR_400       ";
+    else if (odr == LIS3DH_ODR_1600      )
+        str = "LIS3DH_ODR_1600      ";        
+    else if (odr == LIS3DH_ODR_1250      )
+        str = "LIS3DH_ODR_1250      ";
+    else
+        str = "Not allow      ";
+
+    TEST_ODR("%s",str);
+#endif
 }
 
 static void lis3dh_set_fscale(LIS3DHState *src)
@@ -185,48 +253,112 @@ static void lis3dh_set_fscale(LIS3DHState *src)
     if (fscale > LIS3DH_FS_16G)
         fscale = LIS3DH_FS_2G;
 
+#ifdef TESTING_LIS3DH
+    
+    const char *str;
+
+    if (fscale == LIS3DH_FS_2G)
+        str = "LIS3DH_FS_2G";
+    else if (fscale == LIS3DH_FS_4G    )
+        str = "LIS3DH_FS_4G         ";        
+    else if (fscale == LIS3DH_FS_8G   )
+        str = "LIS3DH_FS_8G        ";  
+    else if (fscale == LIS3DH_FS_16G    )
+        str = "LIS3DH_FS_16G      ";
+    else
+        str = "Not allowed";
+
+    TEST_FS("%s",str);
+#endif
+
     src->config->fscale = fscale;
     lis3dh_set_acc_range(src);
     lis3dh_set_So(src);
+    TEST_SO("%.1f",src->params->acc_sensitivity);
+
+}
+
+/* ==================== INTERRUPTIONS ============================================== */
+static void lis3dh_update_drdy_interrupt(LIS3DHState *s)
+{
+    /* Check if all enabled axes have new data */
+    if (!(s->status_reg & LIS3DH_STATUS_REG_BIT_ZYXDA))
+    {
+        return;
+    }
+
+    /* Check if DRDY interrupt is routed to INT1 */
+    bool drdy_to_int1 = (s->ctrl_reg3 & LIS3DH_CTRL_REG3_BIT_I1_ZYXDA) != 0;
+    
+    /* Check if DRDY interrupt is routed to INT2 */
+    bool drdy_to_int2 = false;
+    
+    if (drdy_to_int1) 
+    {
+        /* Check latching mode */
+        if (s->ctrl_reg5 & LIS3DH_CTRL_REG5_BIT_LIR_INT1) 
+        {
+            /* Latched mode: raise and hold until INT1_SRC read */
+            if (!s->config->int1_active) 
+            {
+                qemu_irq_raise(s->int1);
+                s->config->int1_active = true;
+                SENSOR_LIS3DH("INT1 raised (DRDY, latched)");
+            }
+        } else {
+            /* Non-latched mode: brief pulse */
+            qemu_irq_pulse(s->int1);
+            SENSOR_LIS3DH("INT1 pulsed (DRDY, non-latched)");
+        }
+    }
+    
+    if (drdy_to_int2) {
+        if (s->ctrl_reg5 & LIS3DH_CTRL_REG5_BIT_LIR_INT2) 
+        {
+            if (!s->config->int2_active) 
+            {
+                qemu_irq_raise(s->int2);
+                s->config->int2_active = true;
+                SENSOR_LIS3DH("INT2 raised (DRDY, latched)");
+            }
+        } else {
+            qemu_irq_pulse(s->int2);
+            SENSOR_LIS3DH("INT2 pulsed (DRDY, non-latched)");
+        }
+    }
 }
 
 /* ==================== DATA GENERATION ============================================== */
 
-static int16_t lis3dh_get_acc_raw_data(LIS3DHState *src, float data)
-{
-    int16_t raw_data = 0x0000;
+static int16_t lis3dh_get_acc_raw_data(LIS3DHState *src, float data_mg)
+{       
+    /* Convert acceleration (mg) to sensor LSB format and Handle rounding */
+    float lsb_value = roundf(data_mg / src->params->acc_sensitivity);
 
-    /* Convert acceleration to sensor LSB format */
-    float data_with_So = data / src->params->acc_So;
-
-    /* Handle rounding */
-    bool is_pos = (data_with_So >= 0);
-    int16_t data_in_16b = 0x00;
-
-    if ( fabsf(data_with_So - (int)data_with_So) >= 0.5f )
-        data_in_16b = (int16_t)data_with_So + (is_pos ? 1 : -1); 
-    else
-        data_in_16b = (int16_t)data_with_So;
-
-    /* Shift the data depending of the mode */
-    raw_data = data_in_16b << src->params->acc_shifts;
+    int16_t raw_lsb = (int16_t)lsb_value;
     
-    return raw_data;
+    SENSOR_LIS3DH("Input: %.1f mg → %.1f LSB → %d raw\n", 
+            data_mg, lsb_value, raw_lsb);
+
+    /* Shift the data depending on the mode */
+    return (raw_lsb << src->params->acc_shifts);
 }
 
 static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 { 
     LIS3DHState *s = LIS3DH(obj);
-
-    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
+    
+    /* Check if X-axis is enabled */
+    if ((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0)
         return;
-
+    
     /* Data Input In mg */
     int64_t value = 0;
     visit_type_int(v, name, &value, errp);
-
-    if(value < s->params->acc_min_range || value > s->params->acc_max_range)
-       value = 0;
+    
+    /* Range check */
+    if (value < s->params->acc_min_range || value > s->params->acc_max_range) 
+        value = 0;
 
     /* int64_t to float safe cast */
     float flt_value = 0.0;
@@ -235,99 +367,193 @@ static void lis3dh_set_accel_x(Object *obj, Visitor *v, const char *name, void *
     else
         flt_value = (float)value;
 
+    /* Convert to raw sensor data */
     int16_t raw_data = lis3dh_get_acc_raw_data(s, flt_value);
-
     s->out_x_h = (uint8_t)((raw_data & 0xFF00) >> 8);
     s->out_x_l = (uint8_t)(raw_data & 0x00FF);
+    
+    /* Update STATUS_REG: mark X data available */
+    s->status_reg |= LIS3DH_STATUS_REG_BIT_XDA;
+    
+    /* If all enabled axes have data, set ZYXDA */
+    uint8_t enabled_axes = 0;
+    uint8_t ready_axes = 0;
+    
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_XDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_XDA) 
+            ready_axes |= LIS3DH_STATUS_REG_BIT_XDA;
+    }
 
-    SENSOR_LIS3DH("out_x_h: 0x%x \n\n", s->out_x_h);
-    SENSOR_LIS3DH("out_x_l: 0x%x \n\n", s->out_x_l);
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_YEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_YDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_YDA) 
+            ready_axes |= LIS3DH_STATUS_REG_BIT_YDA;
+    }
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_ZEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_ZDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_ZDA) ready_axes |= LIS3DH_STATUS_REG_BIT_ZDA;
+    }
+    
+    if ((ready_axes == enabled_axes) && (enabled_axes != 0)) 
+    {
+        s->status_reg |= LIS3DH_STATUS_REG_BIT_ZYXDA;
+    }
+    
+    SENSOR_LIS3DH("out_x_h: 0x%02x, out_x_l: 0x%02x", s->out_x_h, s->out_x_l);
+
+    /* Generate DRDY interrupt if configured */
+    lis3dh_update_drdy_interrupt(s);
 }
 
 static void lis3dh_set_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
-
-    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
+    
+    /* Check if Y-axis is enabled */
+    if ((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_YEN) == 0)
         return;
-
+    
     /* Data Input In mg */
     int64_t value = 0;
     visit_type_int(v, name, &value, errp);
-
-    if(value < s->params->acc_min_range || value > s->params->acc_max_range)
-       value = 0;
-
+    
+    /* Range check */
+    if (value < s->params->acc_min_range || value > s->params->acc_max_range) 
+        value = 0;
+    
     /* int64_t to float safe cast */
     float flt_value = 0.0;
     if ((value > (int64_t)FLT_MAX) || (value < (int64_t)-FLT_MAX)) 
         flt_value = 0.0;
-    else
+    else 
         flt_value = (float)value;
-
+    
+    
+    /* Convert to raw sensor data */
     int16_t raw_data = lis3dh_get_acc_raw_data(s, flt_value);
-
     s->out_y_h = (uint8_t)((raw_data & 0xFF00) >> 8);
     s->out_y_l = (uint8_t)(raw_data & 0x00FF);
+    
+    /* Update STATUS_REG: mark Y data available */
+    s->status_reg |= LIS3DH_STATUS_REG_BIT_YDA;
+    
+    /* If all enabled axes have data, set ZYXDA */
+    uint8_t enabled_axes = 0;
+    uint8_t ready_axes = 0;
+    
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_XDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_XDA) ready_axes |= LIS3DH_STATUS_REG_BIT_XDA;
+    }
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_YEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_YDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_YDA) ready_axes |= LIS3DH_STATUS_REG_BIT_YDA;
+    }
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_ZEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_ZDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_ZDA) ready_axes |= LIS3DH_STATUS_REG_BIT_ZDA;
+    }
+    
+    if (ready_axes == enabled_axes && enabled_axes != 0) 
+    {
+        s->status_reg |= LIS3DH_STATUS_REG_BIT_ZYXDA;
+    }
+    
+    SENSOR_LIS3DH("out_y_h: 0x%02x, out_y_l: 0x%02x", s->out_y_h, s->out_y_l);
 
-    SENSOR_LIS3DH("out_y_h: 0x%x", s->out_y_h);
-    SENSOR_LIS3DH("out_y_l: 0x%x", s->out_y_l);
+    /* Generate DRDY interrupt if configured */
+    lis3dh_update_drdy_interrupt(s);
 }
 
 static void lis3dh_set_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
-
-    if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
+    
+    /* Check if Z-axis is enabled */
+    if ((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_ZEN) == 0) 
         return;
 
-    /* Data Input In mg */
+    /* Data input in mg */
     int64_t value = 0;
     visit_type_int(v, name, &value, errp);
 
-    if(value < s->params->acc_min_range || value > s->params->acc_max_range)
-    {
-       /** TODO: qemu error line */
-       value = 0;
-    }
-
+    /* Range check */
+    if (value < s->params->acc_min_range || value > s->params->acc_max_range)
+        value = 0;
+    
     /* int64_t to float safe cast */
     float flt_value = 0.0;
-    if ((value > (int64_t)FLT_MAX) || (value < (int64_t)-FLT_MAX)) 
+    if ((value > (int64_t)FLT_MAX) || (value < (int64_t)-FLT_MAX))
         flt_value = 0.0;
     else
         flt_value = (float)value;
 
-    /* get raw data */
+    /* Convert to raw sensor data */
     int16_t raw_data = lis3dh_get_acc_raw_data(s, flt_value);
-
     s->out_z_h = (uint8_t)((raw_data & 0xFF00) >> 8);
     s->out_z_l = (uint8_t)(raw_data & 0x00FF);
+    
+    /* Update STATUS_REG: mark Z data available */
+    s->status_reg |= LIS3DH_STATUS_REG_BIT_ZDA;
+    
+    /* If all enabled axes have data, set ZYXDA */
+    uint8_t enabled_axes = 0;
+    uint8_t ready_axes = 0;
+    
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_XDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_XDA) ready_axes |= LIS3DH_STATUS_REG_BIT_XDA;
+    }
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_YEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_YDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_YDA) ready_axes |= LIS3DH_STATUS_REG_BIT_YDA;
+    }
+    if (s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_ZEN) 
+    {
+        enabled_axes |= LIS3DH_STATUS_REG_BIT_ZDA;
+        if (s->status_reg & LIS3DH_STATUS_REG_BIT_ZDA) ready_axes |= LIS3DH_STATUS_REG_BIT_ZDA;
+    }
+    
+    if (ready_axes == enabled_axes && enabled_axes != 0) {
+        s->status_reg |= LIS3DH_STATUS_REG_BIT_ZYXDA;
+    }
+    
+    SENSOR_LIS3DH("out_z_h: 0x%02x, out_z_l: 0x%02x", s->out_z_h, s->out_z_l);
 
-    SENSOR_LIS3DH("out_z_h: 0x%x", s->out_z_h);
-    SENSOR_LIS3DH("out_z_l: 0x%x", s->out_z_l);
+    /* Generate DRDY interrupt if configured */
+    lis3dh_update_drdy_interrupt(s);
 }
 
 static void lis3dh_get_accel_x(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
+    
     if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
         return;
-
+    
     int16_t raw = ((int16_t)s->out_x_h << 8) | s->out_x_l;
-    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_So));
-
+    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_sensitivity));
     visit_type_int(v, name, &value, errp);
 }
 
 static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
+
     if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
         return;
 
     int16_t raw = ((int16_t)s->out_y_h << 8) | s->out_y_l;
-    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_So));
+    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_sensitivity));
 
     visit_type_int(v, name, &value, errp);
 }
@@ -335,11 +561,12 @@ static void lis3dh_get_accel_y(Object *obj, Visitor *v, const char *name, void *
 static void lis3dh_get_accel_z(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
 {
     LIS3DHState *s = LIS3DH(obj);
+
     if((s->ctrl_reg1 & LIS3DH_CTRL_REG1_BIT_XEN) == 0 )
         return;
 
     int16_t raw = ((int16_t)s->out_z_h << 8) | s->out_z_l;
-    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_So));
+    int64_t value = (int64_t)((raw >> s->params->acc_shifts) * (s->params->acc_sensitivity));
 
     visit_type_int(v, name, &value, errp);
 }
@@ -378,43 +605,33 @@ static void lis3dh_set_temp(Object *obj, Visitor *v, const char *name, void *opa
     
     int64_t value = 0L;
     visit_type_int(v, name, &value, errp);
-
-    if ( (value < LIS3DH_TEMP_MIN || value > LIS3DH_TEMP_MAX)
-        &&  lis3dh_temp_enable(s))
+    
+    if (!lis3dh_temp_enable(s))
+        return;
+    
+    /* temperature range check */
+    if (value < LIS3DH_TEMP_MIN || value > LIS3DH_TEMP_MAX) 
     {
-        /* I assume a factory calibration point of 25ºC for an output of 0 */
-        /* The TSDr is 1 digit/ºC = 1 LSB/ºC (datasheet page 12/54)*/
-        
-        /**
-         * T = raw * (1/TSDr) + 25
-         * ºC = LSB * (ºC/LSB) + ºC
-         *
-         * raw = (T - 25.0) * TSDr
-         * LSB = (ºC - ºC) * (LSB/ºC)
-         */
-
-        /**
-         * - Output left justified
-         * - Output in normal/high mode 10bit long
-         * - Output in low power mode 8bit long
-         */
-        uint8_t shifts = 0x00;
-        if(s->config->mode == LIS3DH_MODE_LOW_POWER)
-            shifts = 0x08;
-        else
-            shifts = 0x06;
-
-        int16_t raw = ((int16_t)(value - 25)) << shifts;
-
-        s->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8);
-        s->adc_3_l = (uint8_t)(raw & 0x00FF); 
+        qemu_log_mask(LOG_GUEST_ERROR,
+            "%s: Temperature %ld°C out of range [%d, %d], clamping to 25°C\n",
+            __func__, value, LIS3DH_TEMP_MIN, LIS3DH_TEMP_MAX);
+        value = 25; // Reset to factory calibration point
     }
-    else if (lis3dh_temp_enable(s))
-    {
-        s->adc_3_h = 0x00;
-        s->adc_3_l = 0x00;
-    }
-
+    
+    /* Factory calibration point: 25°C → raw output 0
+     * TSDr (temperature sensitivity) = 1 LSB/°C
+     * raw = (T - 25) * TSDr
+     */
+    
+    /* Output is left-justified:
+     * - Normal/High-Resolution mode: 10-bit (left-shifted by 6)
+     * - Low-Power mode: 8-bit (left-shifted by 8)
+     */
+    uint8_t shifts = (s->config->mode == LIS3DH_MODE_LOW_POWER) ? 0x08 : 0x06;
+    int16_t raw = ((int16_t)(value - 25)) << shifts;
+    
+    s->adc_3_h = (uint8_t)((raw & 0xFF00) >> 8);
+    s->adc_3_l = (uint8_t)(raw & 0x00FF);
 }
 
 static void lis3dh_get_temp(Object *obj, Visitor *v, const char *name, void *opaque, Error **errp)
@@ -571,20 +788,69 @@ static uint8_t lis3dh_read_register( LIS3DHState *src )
         CASE_READ_RETURN(ret, LIS3DH_ADDR_CTRL_REG6, ctrl_reg6)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_REFERENCE, reference)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_STATUS_REG, status_reg)
+
         CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_X_L, out_x_l)
-        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_X_H, out_x_h)
+
+        case LIS3DH_ADDR_OUT_X_H:
+            ret = src->out_x_h;
+            src->status_reg &= ~LIS3DH_STATUS_REG_BIT_XDA;
+            if (!(src->status_reg & 0x07)) {
+                src->status_reg &= ~LIS3DH_STATUS_REG_BIT_ZYXDA;
+            }
+            break;
+
         CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Y_L, out_y_l)
-        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Y_H, out_y_h)
+
+        case LIS3DH_ADDR_OUT_Y_H:
+            ret = src->out_y_h;
+            src->status_reg &= ~LIS3DH_STATUS_REG_BIT_YDA;
+            if (!(src->status_reg & 0x07)) {
+                src->status_reg &= ~LIS3DH_STATUS_REG_BIT_ZYXDA;
+            }
+            break;
+
         CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Z_L, out_z_l)
-        CASE_READ_RETURN(ret, LIS3DH_ADDR_OUT_Z_H, out_z_h)
+
+        case LIS3DH_ADDR_OUT_Z_H:
+            ret = src->out_z_h;
+            src->status_reg &= ~LIS3DH_STATUS_REG_BIT_ZDA;
+            if (!(src->status_reg & 0x07)) {
+                src->status_reg &= ~LIS3DH_STATUS_REG_BIT_ZYXDA;
+            }
+        break;
+
         CASE_READ_RETURN(ret, LIS3DH_ADDR_FIFO_CTRL, fifo_ctrl_reg)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_FIFO_SRC, fifo_src_reg)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_CFG, int1_cfg)
-        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_SRC, int1_src)
+
+        case LIS3DH_ADDR_INT1_SRC:
+            ret = src->int1_src;    
+            /* Reading INT1_SRC clears latched interrupt */
+            if ((src->ctrl_reg5 & LIS3DH_CTRL_REG5_BIT_LIR_INT1) && src->config->int1_active) 
+            {
+                qemu_irq_lower(src->int1);
+                src->config->int1_active = false;
+                SENSOR_LIS3DH("INT1 cleared (INT1_SRC read)");
+            }
+            break;
+        
         CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_THS, int1_ths)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_INT1_DURATION, int1_duration)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_CFG, int2_cfg)
-        CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_SRC, int2_src)
+
+        case LIS3DH_ADDR_INT2_SRC:
+
+            ret = src->int2_src;
+            /* Reading INT2_SRC clears latched interrupt */
+            if ((src->ctrl_reg5 & LIS3DH_CTRL_REG5_BIT_LIR_INT2) && src->config->int2_active) 
+            {
+                qemu_irq_lower(src->int2);
+                src->config->int2_active = false;
+                SENSOR_LIS3DH("INT2 cleared (INT2_SRC read)");
+            }
+
+            break;
+        
         CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_THS, int2_ths)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_INT2_DURATION, int2_duration)
         CASE_READ_RETURN(ret, LIS3DH_ADDR_CLICK_CFG, click_cfg)
@@ -750,12 +1016,14 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
 
     lis3dh->config = (lis3dh_config_t*)g_malloc(sizeof(lis3dh_config_t));
 
-    lis3dh->config->fscale  = LIS3DH_FS_2G;
-    lis3dh->config->mode    = LIS3DH_MODE_NORMAL;
-    lis3dh->config->odr     = LIS3DH_ODR_100;
+    lis3dh->config->fscale              = LIS3DH_FS_2G;
+    lis3dh->config->mode                = LIS3DH_MODE_NORMAL;
+    lis3dh->config->odr                 = LIS3DH_ODR_100;
     lis3dh->config->temp_enable         = false;
     lis3dh->config->high_pass_filter    = false;
     lis3dh->config->fifo_enabled        = false;
+    lis3dh->config->int1_active         = false;
+    lis3dh->config->int2_active         = false;
 
     lis3dh->params = (lis3dh_params_t*)g_malloc(sizeof(lis3dh_params_t));
 
@@ -765,6 +1033,14 @@ static void lis3dh_realize(DeviceState *dev, Error **errp)
 
     /* Reset registers */
     lis3dh_reset_registers(lis3dh);
+
+    /* gpio output pins */
+    qdev_init_gpio_out(dev, &lis3dh->int1, 1);
+    qdev_init_gpio_out(dev, &lis3dh->int2, 1);
+    
+    /* Lower interrupt lines */
+    qemu_irq_lower(lis3dh->int1);
+    qemu_irq_lower(lis3dh->int2);
 
 }
 
@@ -792,8 +1068,65 @@ static void lis3dh_initfn(Object *obj)
                         lis3dh_set_temp, NULL, NULL);
 }
 
+/* VMState for device state migration/snapshot support */
+static const VMStateDescription vmstate_lis3dh = {
+    .name = "lis3dh",
+    .version_id = 1,
+    .minimum_version_id = 1,
+    .fields = (VMStateField[]) {
+        VMSTATE_I2C_SLAVE(i2c, LIS3DHState),
+        
+        /* Registers */
+        VMSTATE_UINT8(status_reg_aux,   LIS3DHState),
+        VMSTATE_UINT8(adc_1_l,  LIS3DHState),
+        VMSTATE_UINT8(adc_1_h,  LIS3DHState),
+        VMSTATE_UINT8(adc_2_l,  LIS3DHState),
+        VMSTATE_UINT8(adc_2_h,  LIS3DHState),
+        VMSTATE_UINT8(adc_3_l,  LIS3DHState),
+        VMSTATE_UINT8(adc_3_h,  LIS3DHState),
+        VMSTATE_UINT8(who_am_i, LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg0,    LIS3DHState),
+        VMSTATE_UINT8(temp_cfg_reg, LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg1,    LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg2,    LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg3,    LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg4,    LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg5,    LIS3DHState),
+        VMSTATE_UINT8(ctrl_reg6,    LIS3DHState),
+        VMSTATE_UINT8(reference,    LIS3DHState),
+        VMSTATE_UINT8(status_reg,   LIS3DHState),
+        VMSTATE_UINT8(out_x_l,  LIS3DHState),
+        VMSTATE_UINT8(out_x_h,  LIS3DHState),
+        VMSTATE_UINT8(out_y_l,  LIS3DHState),
+        VMSTATE_UINT8(out_y_h,  LIS3DHState),
+        VMSTATE_UINT8(out_z_l,  LIS3DHState),
+        VMSTATE_UINT8(out_z_h,  LIS3DHState),
+        VMSTATE_UINT8(fifo_ctrl_reg,    LIS3DHState),
+        VMSTATE_UINT8(fifo_src_reg, LIS3DHState),
+        VMSTATE_UINT8(int1_cfg, LIS3DHState),
+        VMSTATE_UINT8(int1_src, LIS3DHState),
+        VMSTATE_UINT8(int1_ths, LIS3DHState),
+        VMSTATE_UINT8(int1_duration,    LIS3DHState),
+        VMSTATE_UINT8(int2_cfg, LIS3DHState),
+        VMSTATE_UINT8(int2_src, LIS3DHState),
+        VMSTATE_UINT8(int2_ths, LIS3DHState),
+        VMSTATE_UINT8(int2_duration,    LIS3DHState),
+        VMSTATE_UINT8(click_cfg,    LIS3DHState),
+        VMSTATE_UINT8(click_src,    LIS3DHState),
+        VMSTATE_UINT8(click_ths,    LIS3DHState),
+        VMSTATE_UINT8(time_limit,   LIS3DHState),
+        VMSTATE_UINT8(time_latency, LIS3DHState),
+        VMSTATE_UINT8(time_window,  LIS3DHState),
+        VMSTATE_UINT8(act_ths,  LIS3DHState),
+        VMSTATE_UINT8(act_dur,  LIS3DHState),
+        
+        VMSTATE_END_OF_LIST()
+    }
+};
+
+
 /* LIS3DH class initialization */
-static void lis3dh_class_init( ObjectClass *kclass, void *data )
+static void lis3dh_class_init(ObjectClass *kclass, void *data)
 {
     DeviceClass *dc     = DEVICE_CLASS(kclass);     // The generic device class operations
     I2CSlaveClass *k    = I2C_SLAVE_CLASS(kclass);  // The I2C-specific interface implementation
@@ -801,6 +1134,7 @@ static void lis3dh_class_init( ObjectClass *kclass, void *data )
     /* Device lifecycle */
     dc->realize         = lis3dh_realize;           // Called when device created
     dc->unrealize       = lis3dh_unrealize;         // Clean up
+    dc->vmsd            = &vmstate_lis3dh;
     dc->hotpluggable    = false;
     dc->desc            = "I2C accelerometer: LIS3DH"; 
     

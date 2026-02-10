@@ -261,36 +261,42 @@
 
 #define LIS3DH_ACCEL_CONST    (9.81f)   // Gravity constant (m/s²)
 
-#define LIS3DH_TEMP_MAX    -40  // MIN Value for the temperature sensor
-#define LIS3DH_TEMP_MIN     85  // MAX Value for the temperature sensor
+/* ==================== INTERNAL MACROS ============================================== */
 
-#define LIS3DH_MAX_2G_RANGE      2000   // Acc MAX value (in mg) when FS = 2 
-#define LIS3DH_MIN_2G_RANGE     -2000   // Acc MIN value (in mg) when FS = 2 
+// Temperature sensor operating range
+#define LIS3DH_TEMP_MIN -40  // Minimum temperature (°C)
+#define LIS3DH_TEMP_MAX  85  // Maximum temperature (°C)
 
-#define LIS3DH_MAX_4G_RANGE      4000   // Acc MAX value (in mg) when FS = 4
-#define LIS3DH_MIN_4G_RANGE     -4000   // Acc MIN value (in mg) when FS = 4
+// Acceleration measurement ranges (in mg)
+#define LIS3DH_MAX_2G_RANGE   2000   // Max acceleration when FS = ±2g
+#define LIS3DH_MIN_2G_RANGE  -2000   // Min acceleration when FS = ±2g
 
-#define LIS3DH_MAX_8G_RANGE      8000   // Acc MAX value (in mg) when FS = 8
-#define LIS3DH_MIN_8G_RANGE     -8000   // Acc MIN value (in mg) when FS = 8
+#define LIS3DH_MAX_4G_RANGE   4000   // Max acceleration when FS = ±4g
+#define LIS3DH_MIN_4G_RANGE  -4000   // Min acceleration when FS = ±4g
 
-#define LIS3DH_MAX_16G_RANGE     16000  // Acc MAX value (in mg) when FS = 16
-#define LIS3DH_MIN_16G_RANGE    -16000  // Acc MIN value (in mg) when FS = 16
+#define LIS3DH_MAX_8G_RANGE   8000   // Max acceleration when FS = ±8g
+#define LIS3DH_MIN_8G_RANGE  -8000   // Min acceleration when FS = ±8g
 
+#define LIS3DH_MAX_16G_RANGE  16000  // Max acceleration when FS = ±16g
+#define LIS3DH_MIN_16G_RANGE -16000  // Min acceleration when FS = ±16g
 
-#define LIS3DH_So_HIG_RES_2G    1.0f	// mg/LSB or mg/digit
-#define LIS3DH_So_HIG_RES_4G    2.0f    // mg/LSB or mg/digit
-#define LIS3DH_So_HIG_RES_8G    4.0f    // mg/LSB or mg/digit
-#define LIS3DH_So_HIG_RES_16G   12.0f   // mg/LSB or mg/digit
+// Sensitivity values (mg/LSB) for High-Resolution mode (12-bit)
+#define LIS3DH_So_HIGH_RES_2G   1.0f   // mg/LSB
+#define LIS3DH_So_HIGH_RES_4G   2.0f   // mg/LSB
+#define LIS3DH_So_HIGH_RES_8G   4.0f   // mg/LSB
+#define LIS3DH_So_HIGH_RES_16G  12.0f  // mg/LSB
 
-#define LIS3DH_So_NORMAL_2G     4.0f    // mg/LSB or mg/digit
-#define LIS3DH_So_NORMAL_4G     8.0f    // mg/LSB or mg/digit
-#define LIS3DH_So_NORMAL_8G     16.0f   // mg/LSB or mg/digit
-#define LIS3DH_So_NORMAL_16G    48.0f   // mg/LSB or mg/digit
+// Sensitivity values (mg/LSB) for Normal mode (10-bit)
+#define LIS3DH_So_NORMAL_2G   4.0f   // mg/LSB
+#define LIS3DH_So_NORMAL_4G   8.0f   // mg/LSB
+#define LIS3DH_So_NORMAL_8G   16.0f  // mg/LSB
+#define LIS3DH_So_NORMAL_16G  48.0f  // mg/LSB
 
-#define LIS3DH_So_LOW_POWER_2G  16.0f   // mg/LSB or mg/digit
-#define LIS3DH_So_LOW_POWER_4G  32.0f   // mg/LSB or mg/digit
-#define LIS3DH_So_LOW_POWER_8G  64.0f   // mg/LSB or mg/digit
-#define LIS3DH_So_LOW_POWER_16G 192.0f  // mg/LSB or mg/digit
+// Sensitivity values (mg/LSB) for Low-Power mode (8-bit)
+#define LIS3DH_So_LOW_POWER_2G   16.0f   // mg/LSB
+#define LIS3DH_So_LOW_POWER_4G   32.0f   // mg/LSB
+#define LIS3DH_So_LOW_POWER_8G   64.0f   // mg/LSB
+#define LIS3DH_So_LOW_POWER_16G  192.0f  // mg/LSB
 
 
 #define CASE_READ_RETURN(VAL, REG, FIELD)   case REG: VAL = (src->FIELD); break;
