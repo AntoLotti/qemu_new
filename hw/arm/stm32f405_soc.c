@@ -42,6 +42,8 @@ static const uint32_t adc_addr[] = { 0x40012000, 0x40012100, 0x40012200,
                                      0x40012300, 0x40012400, 0x40012500 };
 static const uint32_t spi_addr[] =   { 0x40013000, 0x40003800, 0x40003C00,
                                        0x40013400, 0x40015000, 0x40015400 };
+static const uint32_t i2c_addr[] = { 0x40005400, 0x40005800, 0x40005C00 };
+
 #define EXTI_ADDR                      0x40013C00
 #define GPIO_ADDRESS                   0x40020000
 
@@ -52,7 +54,7 @@ static const int timer_irq[] = { 28, 29, 30, 50 };
 static const int spi_irq[] =   { 35, 36, 51, 0, 0, 0 };
 static const int exti_irq[] =  { 6, 7, 8, 9, 10, 23, 23, 23, 23, 23, 40,
                                  40, 40, 40, 40, 40} ;
-
+static const int i2c_irq[] = { 31, 32, 33, 34, 72, 73,};
 
 static void stm32f405_soc_gpio_irq(void *opaque, int line, int value) {
     /* empty irq routine, we only use it to notify GPIO state changes to QTest */
@@ -85,11 +87,15 @@ static void stm32f405_soc_initfn(Object *obj)
         object_initialize_child(obj, "spi[*]", &s->spi[i], TYPE_STM32F2XX_SPI);
     }
 
-    object_initialize_child(obj, "exti", &s->exti, TYPE_STM32F4XX_EXTI);
+    for (i = 0; i < STM_NUM_I2CS; i++) {
+        object_initialize_child(obj, "i2c[*]", &s->i2c[i], TYPE_STM32F4XX_I2C);
+    }
 
     for (i = STM32_GPIO_PORT_A; i <= STM32_GPIO_PORT_I; i++) {
         object_initialize_child(obj, "gpio[*]", &s->gpio[i], TYPE_STM32_GPIO);
     }
+        
+    object_initialize_child(obj, "exti", &s->exti, TYPE_STM32F4XX_EXTI);
 
     object_initialize_child(obj, "rcc", &s->rcc, TYPE_STM32_RCC);
 
@@ -249,6 +255,28 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
         sysbus_connect_irq(busdev, 0, qdev_get_gpio_in(armv7m, spi_irq[i]));
     }
 
+    /* I2C devices */
+    for (i = 0; i < STM_NUM_I2CS; i++) 
+    {
+        dev = DEVICE(&s->i2c[i]);
+
+        char *bus_name = g_strdup_printf("i2c%d", i+1);
+        qdev_prop_set_string(dev, "bus-name", bus_name );
+
+        if (!sysbus_realize(SYS_BUS_DEVICE(&s->i2c[i]), errp))
+            return;
+    
+        busdev = SYS_BUS_DEVICE(dev);
+        sysbus_mmio_map(busdev, 0, i2c_addr[i]);
+
+        /* Connect the two interrupts (event and error) for each I2C controller */
+        sysbus_connect_irq(busdev, 0,
+                           qdev_get_gpio_in(armv7m, i2c_irq[i*2]));
+        sysbus_connect_irq(busdev, 1,
+                           qdev_get_gpio_in(armv7m, i2c_irq[i*2+1]));
+       
+    }
+
     /* EXTI device */
     dev = DEVICE(&s->exti);
     if (!sysbus_realize(SYS_BUS_DEVICE(&s->exti), errp)) {
@@ -292,9 +320,6 @@ static void stm32f405_soc_realize(DeviceState *dev_soc, Error **errp)
     create_unimplemented_device("IWDG",        0x40003000, 0x400);
     create_unimplemented_device("I2S2ext",     0x40003000, 0x400);
     create_unimplemented_device("I2S3ext",     0x40004000, 0x400);
-    create_unimplemented_device("I2C1",        0x40005400, 0x400);
-    create_unimplemented_device("I2C2",        0x40005800, 0x400);
-    create_unimplemented_device("I2C3",        0x40005C00, 0x400);
     create_unimplemented_device("CAN1",        0x40006400, 0x400);
     create_unimplemented_device("CAN2",        0x40006800, 0x400);
     create_unimplemented_device("PWR",         0x40007000, 0x400);
