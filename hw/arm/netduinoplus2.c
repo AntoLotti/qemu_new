@@ -30,6 +30,8 @@
 #include "qemu/error-report.h"
 #include "hw/arm/stm32f405_soc.h"
 #include "hw/arm/boot.h"
+#include "hw/sensor/lis3dh.h"
+#include "hw/i2c/i2c.h"
 
 /* Main SYSCLK frequency in Hz (168MHz) */
 #define SYSCLK_FRQ 168000000ULL
@@ -51,6 +53,13 @@ static void netduinoplus2_init(MachineState *machine)
     armv7m_load_kernel(ARM_CPU(first_cpu),
                        machine->kernel_filename,
                        0, FLASH_SIZE);
+
+    STM32F405State *s = STM32F405_SOC(dev);
+    DeviceState *lis3dh = qdev_new(TYPE_LIS3DH);  
+
+    /* LIS3DH to I2C1 */
+    i2c_slave_set_address(I2C_SLAVE(lis3dh), 0x18);                                 //Setting I2C address to 0x18    
+    i2c_slave_realize_and_unref(I2C_SLAVE(lis3dh), s->i2c[0].bus, &error_fatal);    // Connecting to I2C1 bus
 }
 
 static void netduinoplus2_machine_init(MachineClass *mc)

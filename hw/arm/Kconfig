@@ -150,6 +150,7 @@ config NETDUINOPLUS2
     default y
     depends on TCG && ARM
     select STM32F405_SOC
+    select LIS3DH
 
 config OLIMEX_STM32_H405
     bool
@@ -470,6 +471,7 @@ config STM32F405_SOC
     select STM32_GPIO
     select STM32F4XX_SYSCFG
     select STM32F4XX_EXTI
+    select STM32F4XX_I2C
 
 config B_L475E_IOT01A
     bool
