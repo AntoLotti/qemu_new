@@ -338,7 +338,8 @@ static void stm32_gpio_class_init(ObjectClass *klass, void *data)
     device_class_set_props(dc, stm32_gpio_properties);
     dc->vmsd = &vmstate_stm32_gpio;
     dc->realize = stm32_gpio_realize;
-    dc->reset = stm32_gpio_reset;
+    //dc->reset = stm32_gpio_reset;
+    device_class_set_legacy_reset(dc, stm32_gpio_reset);
     dc->desc = "STM32 GPIO";
 }
 

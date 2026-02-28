@@ -134,7 +134,8 @@ static void stm32_rcc_class_init(ObjectClass *klass, void *data)
 {
     DeviceClass *dc = DEVICE_CLASS(klass);
 
-    dc->reset = stm32_rcc_reset;
+    //dc->reset = stm32_rcc_reset;
+    device_class_set_legacy_reset(dc, stm32_rcc_reset);
     dc->vmsd = &vmstate_stm32_rcc;
 }
 
